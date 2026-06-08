@@ -1,0 +1,675 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions", "multiSchema"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [uuid_ossp, pgcrypto, btree_gist]
+}
+
+// ─── Tenants ────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id               String    @id @default(uuid()) @db.Uuid
+  name             String    @db.VarChar(255)
+  slug             String    @unique @db.VarChar(255)
+  country          String    @default("KE") @db.VarChar(2)
+  currency         String    @default("KES") @db.VarChar(3)
+  settings         Json?
+  paymentSettings  Json?     @map("payment_settings")
+  commissionRate   Decimal   @default(10.00) @db.Decimal(5, 2)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz()
+
+  users            User[]
+  services         Service[]
+  addresses        Address[]
+  bookings         Booking[]
+  jobs             Job[]
+  payments         Payment[]
+  ledgerEntries    LedgerEntry[]
+  referrals        Referral[]
+  loyaltyPoints    LoyaltyPoint[]
+  documents        Document[]
+  uploadLogs       UploadLog[]
+  auditLogs        AuditLog[]
+  outboxEvents     Outbox[]
+  recurringRules   RecurringRule[]
+  workflows        Workflow[]
+  rules            Rule[]
+  workflowExecs    WorkflowExecution[]
+  notificationTemplates NotificationTemplate[]
+  notificationLogs NotificationLog[]
+  prompts          Prompt[]
+  aiUsage          AiUsage[]
+
+  @@index([slug])
+  @@index([deletedAt])
+  @@map("tenants")
+}
+
+// ─── Users ──────────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  phone        String    @unique @db.VarChar(20)
+  email        String?   @db.VarChar(255)
+  firstName    String    @map("first_name") @db.VarChar(100)
+  lastName     String    @map("last_name") @db.VarChar(100)
+  passwordHash String?   @map("password_hash") @db.VarChar(255)
+  avatarUrl    String?   @map("avatar_url") @db.VarChar(500)
+  role         String    @default("CUSTOMER") @db.VarChar(50)
+  status       String    @default("ACTIVE") @db.VarChar(20)
+  verifiedAt   DateTime? @map("verified_at") @db.Timestamptz()
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz()
+  metadata     Json?
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz()
+
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
+  customerProfile   CustomerProfile?
+  workerProfile     WorkerProfile?
+  addresses         Address[]
+  bookings          Booking[]          @relation("CustomerBookings")
+  cancelledBookings Booking[]          @relation("CancelledBookings")
+  assignedJobs      Job[]
+  payments          Payment[]
+  ledgerEntries     LedgerEntry[]
+  referralsMade     Referral[]         @relation("ReferrerReferrals")
+  referralsReceived Referral[]         @relation("ReferredReferrals")
+  documents         Document[]
+  auditLogs         AuditLog[]
+  notificationLogs  NotificationLog[]
+
+  @@index([phone])
+  @@index([tenantId, role])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+// ─── Customer Profiles ──────────────────────────────────────────────────────
+
+model CustomerProfile {
+  id                    String    @id @default(uuid()) @db.Uuid
+  userId                String    @unique @map("user_id") @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  homeAddress           Json?     @map("home_address")
+  workAddress           Json?     @map("work_address")
+  preferredPaymentMethod String?  @map("preferred_payment_method") @db.VarChar(50)
+  loyaltyPoints         Int       @default(0) @map("loyalty_points")
+  referralCode          String?   @unique @map("referral_code") @db.VarChar(20)
+  referredBy            String?   @map("referred_by") @db.Uuid
+  referralCount         Int       @default(0) @map("referral_count")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user     User           @relation(fields: [userId], references: [id])
+  tenant   Tenant         @relation(fields: [tenantId], references: [id])
+  referrer User?          @relation("ReferredByUser", fields: [referredBy], references: [id])
+
+  @@index([tenantId])
+  @@index([referralCode])
+  @@map("customer_profiles")
+}
+
+// ─── Worker Profiles ────────────────────────────────────────────────────────
+
+model WorkerProfile {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @unique @map("user_id") @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  idNumber         String?   @map("id_number") @db.VarChar(50)
+  kycStatus        String    @default("PENDING") @map("kyc_status") @db.VarChar(20)
+  kycData          Json?     @map("kyc_data")
+  skills           String[]  @db.Text
+  hourlyRate       Decimal?  @map("hourly_rate") @db.Decimal(10, 2)
+  reliabilityScore Decimal   @default(5.00) @map("reliability_score") @db.Decimal(3, 2)
+  isAvailable      Boolean   @default(true) @map("is_available")
+  currentLocation  Json?     @map("current_location")
+  workingHours     Json?     @map("working_hours")
+  documents        Json?
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user   User   @relation(fields: [userId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([kycStatus])
+  @@index([isAvailable])
+  @@map("worker_profiles")
+}
+
+// ─── Services ───────────────────────────────────────────────────────────────
+
+model Service {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  name            String    @db.VarChar(255)
+  slug            String    @db.VarChar(255)
+  description     String?   @db.Text
+  category        String    @db.VarChar(50)
+  basePrice       Decimal   @map("base_price") @db.Decimal(10, 2)
+  durationMinutes Int       @map("duration_minutes")
+  requirements    String[]  @db.Text
+  isActive        Boolean   @default(true) @map("is_active")
+  metadata        Json?
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  bookings        Booking[]
+  jobs            Job[]
+  recurringRules  RecurringRule[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, category])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("services")
+}
+
+// ─── Addresses ──────────────────────────────────────────────────────────────
+
+model Address {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  label         String?   @db.VarChar(50)
+  streetAddress String    @map("street_address") @db.Text
+  apartmentSuite String?  @map("apartment_suite") @db.VarChar(100)
+  city          String    @db.VarChar(100)
+  county        String    @db.VarChar(100)
+  postalCode    String?   @map("postal_code") @db.VarChar(20)
+  country       String    @default("Kenya") @db.VarChar(100)
+  location      Json?
+  isDefault     Boolean   @default(false) @map("is_default")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user     User      @relation(fields: [userId], references: [id])
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  bookings Booking[]
+
+  @@index([userId])
+  @@index([tenantId])
+  @@map("addresses")
+}
+
+// ─── Bookings ───────────────────────────────────────────────────────────────
+
+model Booking {
+  id                          String    @id @default(uuid()) @db.Uuid
+  tenantId                    String    @map("tenant_id") @db.Uuid
+  customerId                  String    @map("customer_id") @db.Uuid
+  serviceId                   String    @map("service_id") @db.Uuid
+  addressId                   String    @map("address_id") @db.Uuid
+  workerId                    String?   @map("worker_id") @db.Uuid
+  scheduledDate               DateTime  @map("scheduled_date") @db.Date
+  scheduledStart              DateTime  @map("scheduled_start") @db.Time()
+  scheduledEnd                DateTime  @map("scheduled_end") @db.Time()
+  timezone                    String    @default("Africa/Nairobi") @db.VarChar(50)
+  status                      String    @default("PENDING") @db.VarChar(20)
+  cancellationReason          String?   @map("cancellation_reason") @db.Text
+  cancelledBy                 String?   @map("cancelled_by") @db.Uuid
+  cancelledAt                 DateTime? @map("cancelled_at") @db.Timestamptz()
+  cancellationPolicySnapshot  Json?     @map("cancellation_policy_snapshot")
+  baseAmount                  Decimal   @map("base_amount") @db.Decimal(10, 2)
+  discountAmount              Decimal   @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  totalAmount                 Decimal   @map("total_amount") @db.Decimal(10, 2)
+  currency                    String    @default("KES") @db.VarChar(3)
+  isRecurring                 Boolean   @default(false) @map("is_recurring")
+  recurringRuleId             String?   @map("recurring_rule_id") @db.Uuid
+  metadata                    Json?
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  completedAt                 DateTime? @map("completed_at") @db.Timestamptz()
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  customer      User           @relation("CustomerBookings", fields: [customerId], references: [id])
+  service       Service        @relation(fields: [serviceId], references: [id])
+  address       Address        @relation(fields: [addressId], references: [id])
+  worker        User?          @relation("WorkerBookings", fields: [workerId], references: [id])
+  cancelledByUser User?        @relation("CancelledBookings", fields: [cancelledBy], references: [id])
+  recurringRule RecurringRule? @relation(fields: [recurringRuleId], references: [id])
+  jobs          Job[]
+  payments      Payment[]
+
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([workerId, scheduledDate])
+  @@index([status])
+  @@index([tenantId, scheduledDate])
+  @@index([recurringRuleId])
+  @@map("bookings")
+}
+
+// ─── Jobs ───────────────────────────────────────────────────────────────────
+
+model Job {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  bookingId         String    @map("booking_id") @db.Uuid
+  workerId          String    @map("worker_id") @db.Uuid
+  serviceId         String    @map("service_id") @db.Uuid
+  status            String    @default("ASSIGNED") @db.VarChar(20)
+  startedLocation   Json?     @map("started_location")
+  completedLocation Json?     @map("completed_location")
+  acceptedAt        DateTime? @map("accepted_at") @db.Timestamptz()
+  enRouteAt         DateTime? @map("en_route_at") @db.Timestamptz()
+  arrivedAt         DateTime? @map("arrived_at") @db.Timestamptz()
+  startedAt         DateTime? @map("started_at") @db.Timestamptz()
+  completedAt       DateTime? @map("completed_at") @db.Timestamptz()
+  noShowAt          DateTime? @map("no_show_at") @db.Timestamptz()
+  customerRating    Int?      @map("customer_rating")
+  customerReview    String?   @map("customer_review") @db.Text
+  workerRating      Int?      @map("worker_rating")
+  workerReview      String?   @map("worker_review") @db.Text
+  metadata          Json?
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  booking  Booking  @relation(fields: [bookingId], references: [id])
+  worker   User     @relation(fields: [workerId], references: [id])
+  service  Service  @relation(fields: [serviceId], references: [id])
+
+  @@index([workerId, createdAt(sort: Desc)])
+  @@index([bookingId])
+  @@index([status])
+  @@index([tenantId])
+  @@map("jobs")
+}
+
+// ─── Payments ───────────────────────────────────────────────────────────────
+
+model Payment {
+  id                   String    @id @default(uuid()) @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  bookingId            String    @map("booking_id") @db.Uuid
+  customerId           String    @map("customer_id") @db.Uuid
+  amountGross          BigInt    @map("amount_gross")
+  amountFee            BigInt    @default(0) @map("amount_fee")
+  amountNet            BigInt    @map("amount_net")
+  currency             String    @default("KES") @db.VarChar(3)
+  merchantRequestId    String?   @map("merchant_request_id") @db.VarChar(255)
+  checkoutRequestId    String?   @unique @map("checkout_request_id") @db.VarChar(255)
+  mpesaReceiptNumber   String?   @map("mpesa_receipt_number") @db.VarChar(255)
+  mpesaTransactionDate DateTime? @map("mpesa_transaction_date") @db.Timestamptz()
+  status               String    @default("PENDING") @db.VarChar(20)
+  paymentMethod        String    @default("MPESA_STK") @map("payment_method") @db.VarChar(50)
+  metadata             Json?
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  booking  Booking  @relation(fields: [bookingId], references: [id])
+  customer User     @relation(fields: [customerId], references: [id])
+
+  @@index([bookingId])
+  @@index([customerId])
+  @@index([status])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([merchantRequestId])
+  @@map("payments")
+}
+
+// ─── Ledger Entries ─────────────────────────────────────────────────────────
+
+model LedgerEntry {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  paymentId   String    @map("payment_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  type        String    @db.VarChar(50)
+  amount      BigInt
+  currency    String    @default("KES") @db.VarChar(3)
+  description String?   @db.Text
+  metadata    Json?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  payment  Payment  @relation(fields: [paymentId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([paymentId])
+  @@index([userId])
+  @@index([type])
+  @@map("ledger_entries")
+}
+
+// ─── Referrals ──────────────────────────────────────────────────────────────
+
+model Referral {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  referrerId   String   @map("referrer_id") @db.Uuid
+  referredId   String   @map("referred_id") @db.Uuid
+  status       String   @default("PENDING") @db.VarChar(20)
+  rewardAmount Decimal? @map("reward_amount") @db.Decimal(10, 2)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  referrer User   @relation("ReferrerReferrals", fields: [referrerId], references: [id])
+  referred User   @relation("ReferredReferrals", fields: [referredId], references: [id])
+
+  @@unique([referrerId, referredId])
+  @@index([tenantId])
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([status])
+  @@map("referrals")
+}
+
+// ─── Loyalty Points ─────────────────────────────────────────────────────────
+
+model LoyaltyPoint {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  points      Int
+  type        String    @db.VarChar(50)
+  bookingId   String?   @map("booking_id") @db.Uuid
+  description String?   @db.Text
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz()
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([type])
+  @@map("loyalty_points")
+}
+
+// ─── Documents ──────────────────────────────────────────────────────────────
+
+model Document {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  fileName    String    @map("file_name") @db.VarChar(255)
+  fileKey     String    @map("file_key") @db.VarChar(500)
+  mimeType    String    @map("mime_type") @db.VarChar(100)
+  fileSize    BigInt    @map("file_size")
+  category    String    @db.VarChar(50)
+  status      String    @default("ACTIVE") @db.VarChar(20)
+  metadata    Json?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([category])
+  @@map("documents")
+}
+
+// ─── Upload Logs ────────────────────────────────────────────────────────────
+
+model UploadLog {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  documentId String?   @map("document_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  fileName   String    @map("file_name") @db.VarChar(255)
+  fileSize   BigInt    @map("file_size")
+  mimeType   String    @map("mime_type") @db.VarChar(100)
+  status     String    @default("INITIATED") @db.VarChar(20)
+  error      String?   @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  document Document? @relation(fields: [documentId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("upload_logs")
+}
+
+// ─── Audit Log ──────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  entityType String    @map("entity_type") @db.VarChar(50)
+  entityId   String    @map("entity_id") @db.Uuid
+  actorId    String?   @map("actor_id") @db.Uuid
+  action     String    @db.VarChar(50)
+  fromState  String?   @map("from_state") @db.VarChar(50)
+  toState    String?   @map("to_state") @db.VarChar(50)
+  reason     String?   @db.Text
+  metadata   Json?
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@index([tenantId])
+  @@index([actorId])
+  @@map("audit_log")
+}
+
+// ─── Outbox ─────────────────────────────────────────────────────────────────
+
+model Outbox {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  topic      String    @db.VarChar(255)
+  key        String?   @db.VarChar(255)
+  payload    Json
+  headers    Json      @default("{}")
+  status     String    @default("PENDING") @db.VarChar(20)
+  retryCount Int       @default(0) @map("retry_count")
+  lastError  String?   @map("last_error") @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  sentAt     DateTime? @map("sent_at") @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([status, createdAt(sort: Asc)])
+  @@index([tenantId])
+  @@map("outbox")
+}
+
+// ─── Recurring Rules ────────────────────────────────────────────────────────
+
+model RecurringRule {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  customerId      String    @map("customer_id") @db.Uuid
+  serviceId       String    @map("service_id") @db.Uuid
+  frequency       String    @db.VarChar(20)
+  dayOfWeek       Int?      @map("day_of_week")
+  dayOfMonth      Int?      @map("day_of_month")
+  startDate       DateTime  @map("start_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+  nextBookingDate DateTime? @map("next_booking_date") @db.Date
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  customer User      @relation(fields: [customerId], references: [id])
+  service  Service   @relation(fields: [serviceId], references: [id])
+  bookings Booking[]
+
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([nextBookingDate])
+  @@index([isActive])
+  @@map("recurring_rules")
+}
+
+// ─── Workflows ──────────────────────────────────────────────────────────────
+
+model Workflow {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  trigger     String    @db.VarChar(255)
+  isActive    Boolean   @default(true) @map("is_active")
+  metadata    Json?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  tenant     Tenant              @relation(fields: [tenantId], references: [id])
+  rules      Rule[]
+  executions WorkflowExecution[]
+
+  @@index([tenantId])
+  @@index([trigger])
+  @@index([isActive])
+  @@map("workflows")
+}
+
+// ─── Rules ──────────────────────────────────────────────────────────────────
+
+model Rule {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  workflowId  String    @map("workflow_id") @db.Uuid
+  name        String    @db.VarChar(255)
+  conditions  Json
+  actions     Json
+  priority    Int       @default(0)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  workflow Workflow @relation(fields: [workflowId], references: [id])
+
+  @@index([tenantId])
+  @@index([workflowId])
+  @@index([isActive])
+  @@map("rules")
+}
+
+// ─── Workflow Executions ────────────────────────────────────────────────────
+
+model WorkflowExecution {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  workflowId   String    @map("workflow_id") @db.Uuid
+  ruleId       String?   @map("rule_id") @db.Uuid
+  trigger      String    @db.VarChar(255)
+  input        Json
+  output       Json?
+  status       String    @default("PENDING") @db.VarChar(20)
+  error        String?   @db.Text
+  executedAt   DateTime? @map("executed_at") @db.Timestamptz()
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  workflow Workflow @relation(fields: [workflowId], references: [id])
+
+  @@index([tenantId])
+  @@index([workflowId])
+  @@index([status])
+  @@map("workflow_executions")
+}
+
+// ─── Notification Templates ─────────────────────────────────────────────────
+
+model NotificationTemplate {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  name        String    @db.VarChar(255)
+  channel     String    @db.VarChar(50)
+  subject     String?   @db.VarChar(255)
+  body        String    @db.Text
+  variables   String[]  @db.Text
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, name, channel])
+  @@index([tenantId])
+  @@map("notification_templates")
+}
+
+// ─── Notification Logs ──────────────────────────────────────────────────────
+
+model NotificationLog {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  userId         String?   @map("user_id") @db.Uuid
+  templateId     String?   @map("template_id") @db.Uuid
+  channel        String    @db.VarChar(50)
+  recipient      String    @db.VarChar(255)
+  subject        String?   @db.VarChar(255)
+  body           String    @db.Text
+  status         String    @default("PENDING") @db.VarChar(20)
+  externalId     String?   @map("external_id") @db.VarChar(255)
+  error          String?   @db.Text
+  sentAt         DateTime? @map("sent_at") @db.Timestamptz()
+  deliveredAt    DateTime? @map("delivered_at") @db.Timestamptz()
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([channel])
+  @@index([status])
+  @@map("notification_logs")
+}
+
+// ─── Prompts ────────────────────────────────────────────────────────────────
+
+model Prompt {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String?  @map("tenant_id") @db.Uuid
+  name       String   @db.VarChar(100)
+  template   String   @db.Text
+  variables  Json     @default("[]")
+  provider   String   @default("openai") @db.VarChar(50)
+  model      String   @default("gpt-4") @db.VarChar(50)
+  maxTokens  Int      @default(500) @map("max_tokens")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([tenantId])
+  @@index([name])
+  @@map("prompts")
+}
+
+// ─── AI Usage ───────────────────────────────────────────────────────────────
+
+model AiUsage {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  provider    String   @db.VarChar(50)
+  model       String   @db.VarChar(50)
+  promptTokens Int     @map("prompt_tokens")
+  completionTokens Int @map("completion_tokens")
+  totalTokens Int      @map("total_tokens")
+  costUsd     Decimal? @map("cost_usd") @db.Decimal(10, 6)
+  endpoint    String?  @db.VarChar(255)
+  durationMs  Int?     @map("duration_ms")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([provider, model])
+  @@index([createdAt])
+  @@map("ai_usage")
+}

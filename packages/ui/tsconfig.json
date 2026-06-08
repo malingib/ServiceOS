@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "paths": {
+      "@serviceops/ui/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}

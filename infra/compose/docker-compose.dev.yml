@@ -1,0 +1,115 @@
+version: "3.8"
+
+networks:
+  serviceops-dev:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  keycloak_data:
+    driver: local
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: serviceops-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: serviceops
+      POSTGRES_PASSWORD: serviceops_dev
+      POSTGRES_DB: serviceops
+      POSTGRES_MULTIPLE_EXTENSIONS: "uuid-ossp,pgcrypto,btree_gist"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../postgres/init-extensions.sh:/docker-entrypoint-initdb.d/init-extensions.sh
+    networks:
+      - serviceops-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U serviceops -d serviceops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: serviceops-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - serviceops-dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: serviceops-keycloak
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: serviceops
+      KC_DB_PASSWORD: serviceops_dev
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8080
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin123
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ../keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    command:
+      - start-dev
+      - --import-realm
+    networks:
+      - serviceops-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/auth/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  minio:
+    image: minio/minio:latest
+    container_name: serviceops-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: serviceops
+      MINIO_ROOT_PASSWORD: serviceops_dev
+      MINIO_REGION: us-east-1
+      MINIO_BROWSER: "on"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - serviceops-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s

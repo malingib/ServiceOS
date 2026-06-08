@@ -1,0 +1,25 @@
+{
+  "name": "@mobiwave/booking-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --passWithNoTests"
+  },
+  "dependencies": {
+    "@mobiwave/shared": "workspace:*",
+    "@mobiwave/prisma": "workspace:*",
+    "express": "^4.19.2",
+    "ioredis": "^5.4.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/uuid": "^9.0.8",
+    "tsx": "^4.15.0",
+    "typescript": "^5.4.0"
+  }
+}

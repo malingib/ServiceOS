@@ -1,0 +1,217 @@
+module.exports = {
+  apps: [
+    // ─── API Gateway (start first) ─────────────────────────────────────────
+    {
+      name: 'api-gateway',
+      script: './apps/api-gateway/dist/main.js',
+      instances: 2,
+      exec_mode: 'cluster',
+      watch: false,
+      max_memory_restart: '512M',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3001,
+      },
+      env_dev: {
+        NODE_ENV: 'development',
+        PORT: 3001,
+        watch: ['./apps/api-gateway/src'],
+        ignore_watch: ['node_modules', 'dist'],
+      },
+      error_file: './logs/api-gateway/error.log',
+      out_file: './logs/api-gateway/out.log',
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      max_restarts: 10,
+      restart_delay: 5000,
+    },
+
+    // ─── Identity Service ──────────────────────────────────────────────────
+    {
+      name: 'identity-service',
+      script: './apps/identity-service/dist/main.js',
+      instances: 2,
+      exec_mode: 'cluster',
+      watch: false,
+      max_memory_restart: '512M',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3002,
+        IDENTITY_SERVICE_URL: 'http://localhost:3002',
+      },
+      env_dev: {
+        NODE_ENV: 'development',
+        PORT: 3002,
+        watch: ['./apps/identity-service/src'],
+        ignore_watch: ['node_modules', 'dist'],
+      },
+      error_file: './logs/identity-service/error.log',
+      out_file: './logs/identity-service/out.log',
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      max_restarts: 10,
+      restart_delay: 5000,
+    },
+
+    // ─── Booking Service ───────────────────────────────────────────────────
+    {
+      name: 'booking-service',
+      script: './apps/booking-service/dist/main.js',
+      instances: 2,
+      exec_mode: 'cluster',
+      watch: false,
+      max_memory_restart: '512M',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3003,
+        BOOKING_SERVICE_URL: 'http://localhost:3003',
+      },
+      env_dev: {
+        NODE_ENV: 'development',
+        PORT: 3003,
+        watch: ['./apps/booking-service/src'],
+        ignore_watch: ['node_modules', 'dist'],
+      },
+      error_file: './logs/booking-service/error.log',
+      out_file: './logs/booking-service/out.log',
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      max_restarts: 10,
+      restart_delay: 5000,
+    },
+
+    // ─── Payments Service ──────────────────────────────────────────────────
+    {
+      name: 'payments-service',
+      script: './apps/payments-service/dist/main.js',
+      instances: 2,
+      exec_mode: 'cluster',
+      watch: false,
+      max_memory_restart: '512M',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3004,
+        PAYMENTS_SERVICE_URL: 'http://localhost:3004',
+      },
+      env_dev: {
+        NODE_ENV: 'development',
+        PORT: 3004,
+        watch: ['./apps/payments-service/src'],
+        ignore_watch: ['node_modules', 'dist'],
+      },
+      error_file: './logs/payments-service/error.log',
+      out_file: './logs/payments-service/out.log',
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      max_restarts: 10,
+      restart_delay: 5000,
+    },
+
+    // ─── CRM Service ───────────────────────────────────────────────────────
+    {
+      name: 'crm-service',
+      script: './apps/crm-service/dist/main.js',
+      instances: 2,
+      exec_mode: 'cluster',
+      watch: false,
+      max_memory_restart: '512M',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3005,
+        CRM_SERVICE_URL: 'http://localhost:3005',
+      },
+      env_dev: {
+        NODE_ENV: 'development',
+        PORT: 3005,
+        watch: ['./apps/crm-service/src'],
+        ignore_watch: ['node_modules', 'dist'],
+      },
+      error_file: './logs/crm-service/error.log',
+      out_file: './logs/crm-service/out.log',
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      max_restarts: 10,
+      restart_delay: 5000,
+    },
+
+    // ─── Dispatch Service ──────────────────────────────────────────────────
+    {
+      name: 'dispatch-service',
+      script: './apps/dispatch-service/dist/main.js',
+      instances: 1,
+      exec_mode: 'fork',
+      watch: false,
+      max_memory_restart: '512M',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3006,
+        DISPATCH_SERVICE_URL: 'http://localhost:3006',
+      },
+      env_dev: {
+        NODE_ENV: 'development',
+        PORT: 3006,
+        watch: ['./apps/dispatch-service/src'],
+        ignore_watch: ['node_modules', 'dist'],
+      },
+      error_file: './logs/dispatch-service/error.log',
+      out_file: './logs/dispatch-service/out.log',
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      max_restarts: 10,
+      restart_delay: 5000,
+    },
+
+    // ─── Messaging Service ─────────────────────────────────────────────────
+    {
+      name: 'messaging-service',
+      script: './apps/messaging-service/dist/main.js',
+      instances: 1,
+      exec_mode: 'fork',
+      watch: false,
+      max_memory_restart: '512M',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3007,
+        MESSAGING_SERVICE_URL: 'http://localhost:3007',
+      },
+      env_dev: {
+        NODE_ENV: 'development',
+        PORT: 3007,
+        watch: ['./apps/messaging-service/src'],
+        ignore_watch: ['node_modules', 'dist'],
+      },
+      error_file: './logs/messaging-service/error.log',
+      out_file: './logs/messaging-service/out.log',
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      max_restarts: 10,
+      restart_delay: 5000,
+    },
+
+    // ─── Event Ingestion Service ───────────────────────────────────────────
+    {
+      name: 'event-ingestion-service',
+      script: './apps/event-ingestion-service/dist/main.js',
+      instances: 1,
+      exec_mode: 'fork',
+      watch: false,
+      max_memory_restart: '512M',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3013,
+      },
+      env_dev: {
+        NODE_ENV: 'development',
+        PORT: 3013,
+        watch: ['./apps/event-ingestion-service/src'],
+        ignore_watch: ['node_modules', 'dist'],
+      },
+      error_file: './logs/event-ingestion-service/error.log',
+      out_file: './logs/event-ingestion-service/out.log',
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      max_restarts: 10,
+      restart_delay: 5000,
+    },
+  ],
+};

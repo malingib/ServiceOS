@@ -1,0 +1,64 @@
+{
+  "realm": "serviceops",
+  "enabled": true,
+  "displayName": "ServiceOps",
+  "displayNameHtml": "<b>ServiceOps</b>",
+  "loginWithEmailAllowed": false,
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "roles": {
+    "realm": [
+      { "name": "SUPER_ADMIN", "composite": false },
+      { "name": "ADMIN", "composite": false },
+      { "name": "SUPERVISOR", "composite": false },
+      { "name": "WORKER", "composite": false },
+      { "name": "CUSTOMER", "composite": false }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "serviceops-api",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "serviceops-api-secret",
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "authorizationServicesEnabled": true,
+      "attributes": {
+        "access.token.lifespan": "900",
+        "refresh.token.lifespan": "604800"
+      }
+    },
+    {
+      "clientId": "serviceops-web",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": ["http://localhost:3000/*", "https://*.serviceops.co.ke/*"],
+      "webOrigins": ["http://localhost:3000", "https://*.serviceops.co.ke"],
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "attributes": {
+        "access.token.lifespan": "900",
+        "refresh.token.lifespan": "604800"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@serviceops.co.ke",
+      "firstName": "Super",
+      "lastName": "Admin",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "admin123", "temporary": false }],
+      "realmRoles": ["SUPER_ADMIN"]
+    }
+  ]
+}

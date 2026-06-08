@@ -1,0 +1,23 @@
+{
+  "name": "@mobiwave/event-ingestion-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mobiwave/shared": "workspace:*",
+    "@mobiwave/prisma": "workspace:*",
+    "ioredis": "^5.4.1",
+    "kafkajs": "^2.2.4",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.8",
+    "tsx": "^4.15.0",
+    "typescript": "^5.4.0"
+  }
+}

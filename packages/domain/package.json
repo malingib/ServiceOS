@@ -1,0 +1,20 @@
+{
+  "name": "@serviceops/contracts",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./shared": "./src/shared.ts",
+    "./auth": "./src/auth.ts",
+    "./tenants": "./src/tenants.ts",
+    "./bookings": "./src/bookings.ts",
+    "./payments": "./src/payments.ts",
+    "./outbox": "./src/outbox.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

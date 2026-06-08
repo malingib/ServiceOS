@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": false,
+    "checkJs": false,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@serviceops/ui": ["packages/ui/src"],
+      "@serviceops/ui/*": ["packages/ui/src/*"],
+      "@serviceops/hooks": ["packages/hooks/src"],
+      "@serviceops/lib": ["packages/lib/src"],
+      "@serviceops/api": ["packages/api/src"],
+      "@serviceops/auth": ["packages/auth/src"],
+      "@serviceops/query": ["packages/query/src"],
+      "@serviceops/form": ["packages/form/src"],
+      "@serviceops/analytics": ["packages/analytics/src"]
+    }
+  }
+}
