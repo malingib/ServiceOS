@@ -25,7 +25,7 @@ export interface Tenant {
   currency: string;
   settings?: Record<string, unknown>;
   paymentSettings?: Record<string, unknown>;
-  commissionRate: number;
+  commissionRateBps: number;
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
@@ -73,7 +73,7 @@ export interface WorkerProfile {
   kycStatus: KycStatus;
   kycData?: Record<string, unknown>;
   skills: string[];
-  hourlyRate?: number;
+  hourlyRateMinor?: bigint;
   reliabilityScore: number;
   isAvailable: boolean;
   currentLocation?: { lat: number; lng: number };
@@ -90,7 +90,7 @@ export interface Service {
   slug: string;
   description?: string;
   category: ServiceCategory;
-  basePrice: number;
+  basePriceMinor: bigint;
   durationMinutes: number;
   requirements: string[];
   isActive: boolean;
@@ -133,9 +133,9 @@ export interface Booking {
   cancelledBy?: string;
   cancelledAt?: Date;
   cancellationPolicySnapshot?: Record<string, unknown>;
-  baseAmount: number;
-  discountAmount: number;
-  totalAmount: number;
+  baseAmountMinor: bigint;
+  discountAmountMinor: bigint;
+  totalAmountMinor: bigint;
   currency: string;
   isRecurring: boolean;
   recurringRuleId?: string;
@@ -143,6 +143,7 @@ export interface Booking {
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;
+  deletedAt?: Date;
 }
 
 export interface Job {
@@ -174,9 +175,9 @@ export interface Payment {
   tenantId: string;
   bookingId: string;
   customerId: string;
-  amountGross: number;
-  amountFee: number;
-  amountNet: number;
+  amountGross: bigint;
+  amountFee: bigint;
+  amountNet: bigint;
   currency: string;
   merchantRequestId?: string;
   checkoutRequestId?: string;
@@ -195,7 +196,7 @@ export interface LedgerEntry {
   paymentId: string;
   userId: string;
   type: string;
-  amount: number;
+  amount: bigint;
   currency: string;
   description?: string;
   metadata?: Record<string, unknown>;
@@ -219,7 +220,7 @@ export interface Referral {
   referrerId: string;
   referredId: string;
   status: ReferralStatus;
-  rewardAmount?: number;
+  rewardAmountMinor?: bigint;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -282,15 +283,18 @@ export interface AuditLog {
 export interface Outbox {
   id: string;
   tenantId: string;
-  topic: string;
-  key?: string;
+  channel: string;
+  eventType: string;
+  eventKey: string;
   payload: Record<string, unknown>;
   headers: Record<string, unknown>;
   status: OutboxStatus;
-  retryCount: number;
+  attempts: number;
+  maxAttempts: number;
+  nextAttemptAt: Date;
   lastError?: string;
   createdAt: Date;
-  sentAt?: Date;
+  deliveredAt?: Date;
 }
 
 export interface RecurringRule {
@@ -400,7 +404,7 @@ export interface AiUsage {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
-  costUsd?: number;
+  costUsdMicros?: bigint;
   endpoint?: string;
   durationMs?: number;
   createdAt: Date;

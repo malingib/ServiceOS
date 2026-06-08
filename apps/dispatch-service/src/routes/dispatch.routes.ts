@@ -1,10 +1,10 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, Router as ExpressRouter } from 'express';
 import { dispatchService } from '../services/dispatch.service';
 import { heartbeatService } from '../services/heartbeat.service';
 import { ApiResponse, AuthenticatedRequest, requireAuth, requireRole } from '@mobiwave/shared';
 import { v4 as uuidv4 } from 'uuid';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.post('/assign', requireAuth, requireRole('ADMIN', 'SUPER_ADMIN', 'SUPERVISOR'), async (req: Request, res: Response, next: NextFunction) => {
   try {

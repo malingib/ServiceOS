@@ -1,7 +1,7 @@
-import { Router } from 'express';
+import { Router as ExpressRouter } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
-const router = Router();
+const router: ExpressRouter = ExpressRouter();
 const CRM_SERVICE_URL = process.env.CRM_SERVICE_URL || 'http://localhost:3005';
 const DISPATCH_SERVICE_URL = process.env.DISPATCH_SERVICE_URL || 'http://localhost:3007';
 

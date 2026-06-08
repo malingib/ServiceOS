@@ -1,6 +1,5 @@
 import prisma from '@mobiwave/prisma';
 import { otpService } from './otp.service';
-import { keycloakService } from './keycloak.service';
 import { generateTokens, verifyRefreshToken } from '@mobiwave/shared';
 import { v4 as uuidv4 } from 'uuid';
 import Redis from 'ioredis';
@@ -76,14 +75,6 @@ export class AuthService {
       throw new ConflictError('User with this phone number already exists');
     }
 
-    const keycloakId = await keycloakService.createUser({
-      phone: data.phone,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role: data.role,
-      tenantId: data.tenantId,
-    });
-
     const user = await prisma.user.create({
       data: {
         id: uuidv4(),
@@ -94,7 +85,7 @@ export class AuthService {
         role: data.role,
         status: 'ACTIVE',
         verifiedAt: new Date(),
-        metadata: JSON.parse(JSON.stringify({ keycloakId })),
+        metadata: JSON.parse(JSON.stringify({ authProvider: 'phone_otp' })),
       },
     });
 
@@ -120,7 +111,7 @@ export class AuthService {
           tenantId: data.tenantId,
           kycStatus: 'PENDING',
           skills: [],
-          reliabilityScore: 5.0,
+          reliabilityScore: 500,
           isAvailable: true,
         },
       });

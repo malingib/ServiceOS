@@ -67,12 +67,12 @@ export const availabilityQuerySchema = z.object({
 export const stkPushSchema = z.object({
   bookingId: uuidSchema,
   phoneNumber: phoneSchema,
-  amount: z.number().positive().max(500000),
+  amountMinor: z.coerce.bigint().positive(),
 });
 
 export const b2cSchema = z.object({
   destinationPhone: phoneSchema,
-  amount: z.number().positive().max(500000),
+  amountMinor: z.coerce.bigint().positive(),
   occasion: z.string().max(100).optional(),
 });
 
@@ -92,13 +92,13 @@ export const updateCustomerSchema = z.object({
 export const createWorkerSchema = z.object({
   idNumber: z.string().max(50).optional(),
   skills: z.array(z.string()).optional(),
-  hourlyRate: z.number().positive().optional(),
+  hourlyRateMinor: z.coerce.bigint().positive().optional(),
   workingHours: z.record(z.unknown()).optional(),
 });
 
 export const updateWorkerSchema = z.object({
   skills: z.array(z.string()).optional(),
-  hourlyRate: z.number().positive().optional(),
+  hourlyRateMinor: z.coerce.bigint().positive().optional(),
   isAvailable: z.boolean().optional(),
   workingHours: z.record(z.unknown()).optional(),
   currentLocation: z
@@ -128,7 +128,7 @@ export const createServiceSchema = z.object({
     'PLUMBING',
     'ELECTRICAL',
   ]),
-  basePrice: z.number().positive(),
+  basePriceMinor: z.coerce.bigint().positive(),
   durationMinutes: z.number().int().positive(),
   requirements: z.array(z.string()).optional(),
   metadata: z.record(z.unknown()).optional(),
@@ -138,7 +138,7 @@ export const updateServiceSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   description: z.string().max(1000).optional(),
   category: z.string().optional(),
-  basePrice: z.number().positive().optional(),
+  basePriceMinor: z.coerce.bigint().positive().optional(),
   durationMinutes: z.number().int().positive().optional(),
   requirements: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),
@@ -193,7 +193,6 @@ export const updateJobStateSchema = z.object({
     'ACCEPTED',
     'DECLINED',
     'EN_ROUTE',
-    'ARRIVED',
     'IN_PROGRESS',
     'COMPLETED',
     'NO_SHOW',
@@ -243,7 +242,7 @@ export const createTenantSchema = z.object({
   slug: z.string().min(1).max(255).regex(/^[a-z0-9-]+$/),
   country: z.string().length(2).default('KE'),
   currency: z.string().length(3).default('KES'),
-  commissionRate: z.number().min(0).max(100).default(10),
+  commissionRateBps: z.number().int().min(0).max(10000).default(1000),
   settings: z.record(z.unknown()).optional(),
   paymentSettings: z.record(z.unknown()).optional(),
 });

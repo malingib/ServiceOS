@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router as ExpressRouter } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { requireAuth } from '@mobiwave/shared';
 import { authRoutes } from './auth.routes';
@@ -7,7 +7,7 @@ import { paymentRoutes } from './payment.routes';
 import { workerRoutes } from './worker.routes';
 import { adminRoutes } from './admin.routes';
 
-const router = Router();
+const router: ExpressRouter = ExpressRouter();
 
 const IDENTITY_SERVICE_URL = process.env.IDENTITY_SERVICE_URL || 'http://localhost:3002';
 const BOOKING_SERVICE_URL = process.env.BOOKING_SERVICE_URL || 'http://localhost:3003';

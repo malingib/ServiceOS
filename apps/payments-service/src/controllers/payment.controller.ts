@@ -7,13 +7,14 @@ export class PaymentController {
   async stkPush(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const { bookingId, phoneNumber, amount } = req.body;
+      const { bookingId, phoneNumber, amountMinor } = req.body;
       const result = await paymentService.initiateStkPush({
         bookingId,
         phoneNumber,
-        amount,
+        amountMinor,
         tenantId: authReq.user.tenantId,
         customerId: authReq.user.id,
+        idempotencyKey: req.headers['idempotency-key'] as string | undefined,
       });
       const response: ApiResponse = {
         success: true,
@@ -79,9 +80,9 @@ export class PaymentController {
   async b2c(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const { destinationPhone, amount, occasion } = req.body;
+      const { destinationPhone, amountMinor, occasion } = req.body;
       const { mpesaService } = await import('../services/mpesa.service');
-      const result = await mpesaService.initiateB2C({ destinationPhone, amount, occasion });
+      const result = await mpesaService.initiateB2C({ destinationPhone, amountMinor, occasion });
       const response: ApiResponse = {
         success: true,
         data: result,

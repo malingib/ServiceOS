@@ -1,10 +1,10 @@
-import express from 'express';
+import express, { Application } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { errorHandler, notFoundHandler, requestIdMiddleware, globalRateLimit } from '@mobiwave/shared';
 import { rewardsRoutes, promotionRoutes } from './routes/rewards.routes';
 
-const app = express();
+const app: Application = express();
 const PORT = parseInt(process.env.PORT || '3008', 10);
 
 app.use(helmet());

@@ -70,7 +70,7 @@ describe('MpesaService', () => {
 
       const result = await mpesaService.initiateStkPush({
         phoneNumber: '+254700100200',
-        amount: 2500,
+        amountMinor: '2500',
         accountReference: 'payment-id',
         transactionDesc: 'Test payment',
       });
@@ -93,7 +93,7 @@ describe('MpesaService', () => {
 
       await mpesaService.initiateStkPush({
         phoneNumber: '0700100200',
-        amount: 2500,
+        amountMinor: '2500',
         accountReference: 'payment-id',
         transactionDesc: 'Test',
       });
@@ -111,7 +111,7 @@ describe('MpesaService', () => {
 
       await expect(mpesaService.initiateStkPush({
         phoneNumber: '+254700100200',
-        amount: 2500,
+        amountMinor: '2500',
         accountReference: 'payment-id',
         transactionDesc: 'Test',
       })).rejects.toThrow(MpesaError);
@@ -176,7 +176,7 @@ describe('MpesaService', () => {
 
       const result = await mpesaService.initiateB2C({
         destinationPhone: '+254700100200',
-        amount: 1000,
+        amountMinor: '1000',
       });
 
       expect(result.ConversationID).toBe('C-001');

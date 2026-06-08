@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, Router as ExpressRouter } from 'express';
 import { bookingController } from '../controllers/booking.controller';
 import { requireAuth, requireRole } from '@mobiwave/shared';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.post('/', requireAuth, (req, res, next) => bookingController.create(req, res, next));
 router.get('/', requireAuth, (req, res, next) => bookingController.list(req, res, next));

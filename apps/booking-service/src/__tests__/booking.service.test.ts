@@ -55,8 +55,8 @@ describe('BookingService', () => {
         notes: 'Please be thorough',
       });
 
-      expect(result.status).toBe('PENDING');
-      expect(result.totalAmount).toBe(mockService.basePrice);
+      expect(result.status).toBe('AWAITING_PAYMENT');
+      expect(result.totalAmountMinor).toBe(mockService.basePriceMinor);
     });
 
     it('should throw NotFoundError for non-existent service', async () => {
@@ -101,8 +101,8 @@ describe('BookingService', () => {
       });
 
       const createCall = (mockedPrisma.booking.create as jest.Mock).mock.calls[0][0];
-      expect(createCall.data.baseAmount).toBe(mockService.basePrice);
-      expect(createCall.data.totalAmount).toBe(mockService.basePrice);
+      expect(createCall.data.baseAmountMinor).toBe(mockService.basePriceMinor);
+      expect(createCall.data.totalAmountMinor).toBe(mockService.basePriceMinor);
     });
   });
 

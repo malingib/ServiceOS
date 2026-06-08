@@ -29,14 +29,15 @@ export class RewardsService {
       data: {
         id: uuidv4(),
         tenantId: data.tenantId,
-        topic: 'referral.created',
-        key: referral.id,
+        channel: 'rewards',
+        eventType: 'referral.created',
+        eventKey: referral.id,
         payload: {
           referralId: referral.id,
           referrerId: data.referrerId,
           referredId: data.referredId,
         },
-        headers: { eventType: 'referral.created' },
+        headers: {},
         status: 'PENDING',
       },
     });
@@ -97,10 +98,11 @@ export class RewardsService {
       data: {
         id: uuidv4(),
         tenantId,
-        topic: 'points.redeemed',
-        key: loyaltyPoint.id,
+        channel: 'rewards',
+        eventType: 'points.redeemed',
+        eventKey: loyaltyPoint.id,
         payload: { userId, points, balance: balance - points },
-        headers: { eventType: 'points.redeemed' },
+        headers: {},
         status: 'PENDING',
       },
     });
@@ -127,10 +129,11 @@ export class RewardsService {
       data: {
         id: uuidv4(),
         tenantId: data.tenantId,
-        topic: 'points.earned',
-        key: loyaltyPoint.id,
+        channel: 'rewards',
+        eventType: 'points.earned',
+        eventKey: loyaltyPoint.id,
         payload: { userId: data.userId, points: data.points, bookingId: data.bookingId },
-        headers: { eventType: 'points.earned' },
+        headers: {},
         status: 'PENDING',
       },
     });

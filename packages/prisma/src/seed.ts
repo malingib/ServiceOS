@@ -14,7 +14,7 @@ async function main() {
       slug: 'serviceops-kenya',
       country: 'KE',
       currency: 'KES',
-      commissionRate: 10.0,
+      commissionRateBps: 1000,
       settings: {
         brand_name: 'ServiceOps',
         support_phone: '+254700000000',
@@ -96,28 +96,28 @@ async function main() {
       firstName: 'John',
       lastName: 'Kamau',
       skills: ['Deep Cleaning', 'Regular Cleaning', 'Office Cleaning'],
-      hourlyRate: 350.0,
+      hourlyRateMinor: BigInt(350),
     },
     {
       phone: '+254734567890',
       firstName: 'Mary',
       lastName: 'Akinyi',
       skills: ['Laundry', 'Ironing', 'Dry Cleaning'],
-      hourlyRate: 300.0,
+      hourlyRateMinor: BigInt(300),
     },
     {
       phone: '+254745678901',
       firstName: 'Peter',
       lastName: 'Ochieng',
       skills: ['Plumbing', 'Electrical', 'General Maintenance'],
-      hourlyRate: 500.0,
+      hourlyRateMinor: BigInt(500),
     },
     {
       phone: '+254756789012',
       firstName: 'Grace',
       lastName: 'Njeri',
       skills: ['Deep Cleaning', 'Cooking', 'Elder Care'],
-      hourlyRate: 400.0,
+      hourlyRateMinor: BigInt(400),
     },
   ];
 
@@ -146,8 +146,8 @@ async function main() {
         idNumber: `ID${Math.floor(10000000 + Math.random() * 90000000)}`,
         kycStatus: 'VERIFIED',
         skills: w.skills,
-        hourlyRate: w.hourlyRate,
-        reliabilityScore: 4.5 + Math.random() * 0.5,
+        hourlyRateMinor: w.hourlyRateMinor,
+        reliabilityScore: 450 + Math.floor(Math.random() * 50),
         isAvailable: true,
         workingHours: {
           monday: { start: '08:00', end: '18:00' },
@@ -172,7 +172,7 @@ async function main() {
       slug: 'regular-cleaning',
       category: 'CLEANING',
       description: 'Standard home cleaning service covering dusting, mopping, bathroom and kitchen cleaning.',
-      basePrice: 2000.0,
+      basePriceMinor: BigInt(2000),
       durationMinutes: 120,
       requirements: ['Cleaning supplies provided by customer', 'Access to water and electricity'],
     },
@@ -181,7 +181,7 @@ async function main() {
       slug: 'deep-cleaning',
       category: 'CLEANING',
       description: 'Intensive cleaning including hard-to-reach areas, appliance interiors, and detailed scrubbing.',
-      basePrice: 3500.0,
+      basePriceMinor: BigInt(3500),
       durationMinutes: 240,
       requirements: ['Vacuum cleaner', 'Specialized cleaning agents'],
     },
@@ -190,7 +190,7 @@ async function main() {
       slug: 'office-cleaning',
       category: 'CLEANING',
       description: 'Commercial cleaning for offices and workspaces.',
-      basePrice: 5000.0,
+      basePriceMinor: BigInt(5000),
       durationMinutes: 180,
       requirements: ['After-hours access', 'Waste disposal area'],
     },
@@ -199,7 +199,7 @@ async function main() {
       slug: 'laundry-ironing',
       category: 'LAUNDRY',
       description: 'Wash, dry, and iron clothing and linens.',
-      basePrice: 1500.0,
+      basePriceMinor: BigInt(1500),
       durationMinutes: 180,
       requirements: ['Washing machine', 'Detergent', 'Ironing board'],
     },
@@ -208,7 +208,7 @@ async function main() {
       slug: 'dry-cleaning',
       category: 'LAUNDRY',
       description: 'Professional dry cleaning for delicate fabrics and formal wear.',
-      basePrice: 2500.0,
+      basePriceMinor: BigInt(2500),
       durationMinutes: 120,
       requirements: ['Specialized cleaning solvents'],
     },
@@ -217,7 +217,7 @@ async function main() {
       slug: 'plumbing-services',
       category: 'MAINTENANCE',
       description: 'Fix leaks, unblock drains, install fixtures, and general plumbing repairs.',
-      basePrice: 3000.0,
+      basePriceMinor: BigInt(3000),
       durationMinutes: 120,
       requirements: ['Basic tools', 'Replacement parts paid separately'],
     },
@@ -226,7 +226,7 @@ async function main() {
       slug: 'electrical-services',
       category: 'MAINTENANCE',
       description: 'Wiring, socket installation, lighting, and electrical fault diagnosis.',
-      basePrice: 3000.0,
+      basePriceMinor: BigInt(3000),
       durationMinutes: 120,
       requirements: ['Certified electrician', 'Safety equipment'],
     },
@@ -235,7 +235,7 @@ async function main() {
       slug: 'elder-care-companion',
       category: 'CAREGIVER',
       description: 'Companionship and basic care for elderly family members.',
-      basePrice: 5000.0,
+      basePriceMinor: BigInt(5000),
       durationMinutes: 480,
       requirements: ['First aid certified', 'Patient care training'],
     },
@@ -252,14 +252,14 @@ async function main() {
         slug: s.slug,
         category: s.category,
         description: s.description,
-        basePrice: s.basePrice,
+        basePriceMinor: s.basePriceMinor,
         durationMinutes: s.durationMinutes,
         requirements: s.requirements,
         isActive: true,
       },
     });
     services.push(service);
-    console.log(`  Service: ${service.name} (KES ${service.basePrice})`);
+    console.log(`  Service: ${service.name} (KES ${service.basePriceMinor})`);
   }
 
   // ─── Addresses ───────────────────────────────────────────────────────────
@@ -290,7 +290,7 @@ async function main() {
     new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2),
   ];
 
-  const bookingStatuses = ['CONFIRMED', 'PENDING', 'COMPLETED'];
+  const bookingStatuses = ['CONFIRMED', 'AWAITING_PAYMENT', 'COMPLETED'];
 
   for (let i = 0; i < bookingDates.length; i++) {
     const service = services[i % services.length];
@@ -307,13 +307,30 @@ async function main() {
         customerId: customer.id,
         serviceId: service.id,
         addressId: address.id,
-        workerId: status !== 'PENDING' ? worker.id : null,
+        workerId: status !== 'AWAITING_PAYMENT' ? worker.id : null,
         scheduledDate: bookingDates[i],
-        scheduledStart: new Date(`1970-01-01T${String(startHour).padStart(2, '0')}:00:00`),
-        scheduledEnd: new Date(`1970-01-01T${String(startHour + 2).padStart(2, '0')}:00:00`),
+        scheduledStart: new Date(
+          bookingDates[i].getFullYear(),
+          bookingDates[i].getMonth(),
+          bookingDates[i].getDate(),
+          startHour,
+          0,
+          0,
+          0
+        ),
+        scheduledEnd: new Date(
+          bookingDates[i].getFullYear(),
+          bookingDates[i].getMonth(),
+          bookingDates[i].getDate(),
+          startHour + 2,
+          0,
+          0,
+          0
+        ),
         status: status,
-        baseAmount: service.basePrice,
-        totalAmount: service.basePrice,
+        baseAmountMinor: service.basePriceMinor,
+        discountAmountMinor: BigInt(0),
+        totalAmountMinor: service.basePriceMinor,
         currency: 'KES',
         timezone: 'Africa/Nairobi',
       },

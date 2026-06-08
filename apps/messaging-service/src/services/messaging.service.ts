@@ -80,8 +80,9 @@ export class MessagingService {
       data: {
         id: uuidv4(),
         tenantId: data.tenantId,
-        topic: 'notification.sent',
-        key: logId,
+        channel: 'notification',
+        eventType: 'notification.sent',
+        eventKey: logId,
         payload: {
           notificationLogId: logId,
           channel: data.channel,
@@ -89,7 +90,7 @@ export class MessagingService {
           status,
           userId: data.userId,
         } as any,
-        headers: { eventType: 'notification.sent' } as any,
+        headers: {} as any,
         status: 'PENDING',
       },
     });

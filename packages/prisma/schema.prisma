@@ -20,16 +20,19 @@ model Tenant {
   currency         String    @default("KES") @db.VarChar(3)
   settings         Json?
   paymentSettings  Json?     @map("payment_settings")
-  commissionRate   Decimal   @default(10.00) @db.Decimal(5, 2)
+  commissionRateBps Int      @default(1000) @map("commission_rate_bps")
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
   deletedAt        DateTime? @map("deleted_at") @db.Timestamptz()
 
   users            User[]
+  customerProfiles CustomerProfile[]
+  workerProfiles   WorkerProfile[]
   services         Service[]
   addresses        Address[]
   bookings         Booking[]
   jobs             Job[]
+  jobEvents        JobEvent[]
   payments         Payment[]
   ledgerEntries    LedgerEntry[]
   referrals        Referral[]
@@ -78,14 +81,19 @@ model User {
   addresses         Address[]
   bookings          Booking[]          @relation("CustomerBookings")
   cancelledBookings Booking[]          @relation("CancelledBookings")
+  workerBookings     Booking[]          @relation("WorkerBookings")
   assignedJobs      Job[]
   payments          Payment[]
   ledgerEntries     LedgerEntry[]
   referralsMade     Referral[]         @relation("ReferrerReferrals")
   referralsReceived Referral[]         @relation("ReferredReferrals")
+  referredProfiles  CustomerProfile[]  @relation("ReferredByUser")
+  loyaltyPoints     LoyaltyPoint[]
   documents         Document[]
   auditLogs         AuditLog[]
   notificationLogs  NotificationLog[]
+  aiUsage           AiUsage[]
+  recurringRules    RecurringRule[]
 
   @@index([phone])
   @@index([tenantId, role])
@@ -128,8 +136,8 @@ model WorkerProfile {
   kycStatus        String    @default("PENDING") @map("kyc_status") @db.VarChar(20)
   kycData          Json?     @map("kyc_data")
   skills           String[]  @db.Text
-  hourlyRate       Decimal?  @map("hourly_rate") @db.Decimal(10, 2)
-  reliabilityScore Decimal   @default(5.00) @map("reliability_score") @db.Decimal(3, 2)
+  hourlyRateMinor  BigInt?   @map("hourly_rate_minor")
+  reliabilityScore Int       @default(500) @map("reliability_score")
   isAvailable      Boolean   @default(true) @map("is_available")
   currentLocation  Json?     @map("current_location")
   workingHours     Json?     @map("working_hours")
@@ -155,7 +163,7 @@ model Service {
   slug            String    @db.VarChar(255)
   description     String?   @db.Text
   category        String    @db.VarChar(50)
-  basePrice       Decimal   @map("base_price") @db.Decimal(10, 2)
+  basePriceMinor  BigInt    @map("base_price_minor")
   durationMinutes Int       @map("duration_minutes")
   requirements    String[]  @db.Text
   isActive        Boolean   @default(true) @map("is_active")
@@ -213,24 +221,26 @@ model Booking {
   addressId                   String    @map("address_id") @db.Uuid
   workerId                    String?   @map("worker_id") @db.Uuid
   scheduledDate               DateTime  @map("scheduled_date") @db.Date
-  scheduledStart              DateTime  @map("scheduled_start") @db.Time()
-  scheduledEnd                DateTime  @map("scheduled_end") @db.Time()
+  scheduledStart              DateTime  @map("scheduled_start") @db.Timestamptz()
+  scheduledEnd                DateTime  @map("scheduled_end") @db.Timestamptz()
   timezone                    String    @default("Africa/Nairobi") @db.VarChar(50)
-  status                      String    @default("PENDING") @db.VarChar(20)
+  status                      String    @default("DRAFT") @db.VarChar(20)
   cancellationReason          String?   @map("cancellation_reason") @db.Text
   cancelledBy                 String?   @map("cancelled_by") @db.Uuid
   cancelledAt                 DateTime? @map("cancelled_at") @db.Timestamptz()
   cancellationPolicySnapshot  Json?     @map("cancellation_policy_snapshot")
-  baseAmount                  Decimal   @map("base_amount") @db.Decimal(10, 2)
-  discountAmount              Decimal   @default(0) @map("discount_amount") @db.Decimal(10, 2)
-  totalAmount                 Decimal   @map("total_amount") @db.Decimal(10, 2)
+  baseAmountMinor             BigInt    @map("base_amount_minor")
+  discountAmountMinor         BigInt    @default(0) @map("discount_amount_minor")
+  totalAmountMinor            BigInt    @map("total_amount_minor")
   currency                    String    @default("KES") @db.VarChar(3)
+  version                     Int       @default(1)
   isRecurring                 Boolean   @default(false) @map("is_recurring")
   recurringRuleId             String?   @map("recurring_rule_id") @db.Uuid
   metadata                    Json?
   createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt                   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
   completedAt                 DateTime? @map("completed_at") @db.Timestamptz()
+  deletedAt                   DateTime? @map("deleted_at") @db.Timestamptz()
 
   tenant        Tenant         @relation(fields: [tenantId], references: [id])
   customer      User           @relation("CustomerBookings", fields: [customerId], references: [id])
@@ -241,12 +251,14 @@ model Booking {
   recurringRule RecurringRule? @relation(fields: [recurringRuleId], references: [id])
   jobs          Job[]
   payments      Payment[]
+  jobEvents     JobEvent[]
 
   @@index([customerId, createdAt(sort: Desc)])
   @@index([workerId, scheduledDate])
   @@index([status])
   @@index([tenantId, scheduledDate])
   @@index([recurringRuleId])
+  @@index([deletedAt])
   @@map("bookings")
 }
 
@@ -258,9 +270,10 @@ model Job {
   bookingId         String    @map("booking_id") @db.Uuid
   workerId          String    @map("worker_id") @db.Uuid
   serviceId         String    @map("service_id") @db.Uuid
-  status            String    @default("ASSIGNED") @db.VarChar(20)
+  status            String    @default("PENDING") @db.VarChar(20)
   startedLocation   Json?     @map("started_location")
   completedLocation Json?     @map("completed_location")
+  assignedAt        DateTime? @map("assigned_at") @db.Timestamptz()
   acceptedAt        DateTime? @map("accepted_at") @db.Timestamptz()
   enRouteAt         DateTime? @map("en_route_at") @db.Timestamptz()
   arrivedAt         DateTime? @map("arrived_at") @db.Timestamptz()
@@ -274,17 +287,45 @@ model Job {
   metadata          Json?
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz()
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id])
   booking  Booking  @relation(fields: [bookingId], references: [id])
   worker   User     @relation(fields: [workerId], references: [id])
   service  Service  @relation(fields: [serviceId], references: [id])
+  events   JobEvent[]
 
   @@index([workerId, createdAt(sort: Desc)])
-  @@index([bookingId])
+  @@unique([bookingId])
   @@index([status])
   @@index([tenantId])
+  @@index([deletedAt])
   @@map("jobs")
+}
+
+// ─── Job Events / State Audit ───────────────────────────────────────────────
+
+model JobEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  bookingId  String?  @map("booking_id") @db.Uuid
+  jobId      String?  @map("job_id") @db.Uuid
+  entityType String   @map("entity_type") @db.VarChar(30)
+  fromState  String?  @map("from_state") @db.VarChar(50)
+  toState    String   @map("to_state") @db.VarChar(50)
+  actorId    String?  @map("actor_id") @db.Uuid
+  reason     String?  @db.Text
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+  job     Job?     @relation(fields: [jobId], references: [id])
+
+  @@index([tenantId, entityType, createdAt(sort: Desc)])
+  @@index([bookingId])
+  @@index([jobId])
+  @@map("job_events")
 }
 
 // ─── Payments ───────────────────────────────────────────────────────────────
@@ -302,7 +343,7 @@ model Payment {
   checkoutRequestId    String?   @unique @map("checkout_request_id") @db.VarChar(255)
   mpesaReceiptNumber   String?   @map("mpesa_receipt_number") @db.VarChar(255)
   mpesaTransactionDate DateTime? @map("mpesa_transaction_date") @db.Timestamptz()
-  status               String    @default("PENDING") @db.VarChar(20)
+  status               String    @default("INITIATED") @db.VarChar(20)
   paymentMethod        String    @default("MPESA_STK") @map("payment_method") @db.VarChar(50)
   metadata             Json?
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz()
@@ -311,6 +352,7 @@ model Payment {
   tenant   Tenant   @relation(fields: [tenantId], references: [id])
   booking  Booking  @relation(fields: [bookingId], references: [id])
   customer User     @relation(fields: [customerId], references: [id])
+  ledgerEntries LedgerEntry[]
 
   @@index([bookingId])
   @@index([customerId])
@@ -353,7 +395,7 @@ model Referral {
   referrerId   String   @map("referrer_id") @db.Uuid
   referredId   String   @map("referred_id") @db.Uuid
   status       String   @default("PENDING") @db.VarChar(20)
-  rewardAmount Decimal? @map("reward_amount") @db.Decimal(10, 2)
+  rewardAmountMinor BigInt? @map("reward_amount_minor")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
@@ -410,6 +452,7 @@ model Document {
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   user   User   @relation(fields: [userId], references: [id])
+  uploadLogs UploadLog[]
 
   @@index([tenantId])
   @@index([userId])
@@ -455,6 +498,7 @@ model AuditLog {
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
+  actor  User?  @relation(fields: [actorId], references: [id])
 
   @@index([entityType, entityId, createdAt(sort: Desc)])
   @@index([tenantId])
@@ -467,19 +511,23 @@ model AuditLog {
 model Outbox {
   id         String    @id @default(uuid()) @db.Uuid
   tenantId   String    @map("tenant_id") @db.Uuid
-  topic      String    @db.VarChar(255)
-  key        String?   @db.VarChar(255)
+  channel    String    @db.VarChar(50)
+  eventType  String    @map("event_type") @db.VarChar(255)
+  eventKey   String    @map("event_key") @db.VarChar(255)
   payload    Json
   headers    Json      @default("{}")
   status     String    @default("PENDING") @db.VarChar(20)
-  retryCount Int       @default(0) @map("retry_count")
+  attempts   Int       @default(0)
+  maxAttempts Int      @default(5) @map("max_attempts")
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz()
   lastError  String?   @map("last_error") @db.Text
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-  sentAt     DateTime? @map("sent_at") @db.Timestamptz()
+  deliveredAt DateTime? @map("delivered_at") @db.Timestamptz()
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
-  @@index([status, createdAt(sort: Asc)])
+  @@unique([eventType, eventKey])
+  @@index([status, nextAttemptAt(sort: Asc)])
   @@index([tenantId])
   @@map("outbox")
 }
@@ -646,6 +694,8 @@ model Prompt {
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
   @@index([tenantId])
   @@index([name])
   @@map("prompts")
@@ -662,10 +712,13 @@ model AiUsage {
   promptTokens Int     @map("prompt_tokens")
   completionTokens Int @map("completion_tokens")
   totalTokens Int      @map("total_tokens")
-  costUsd     Decimal? @map("cost_usd") @db.Decimal(10, 6)
+  costUsdMicros BigInt? @map("cost_usd_micros")
   endpoint    String?  @db.VarChar(255)
   durationMs  Int?     @map("duration_ms")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User?  @relation(fields: [userId], references: [id])
 
   @@index([tenantId])
   @@index([userId])

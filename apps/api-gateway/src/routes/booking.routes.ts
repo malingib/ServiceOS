@@ -1,7 +1,7 @@
-import { Router } from 'express';
+import { Router as ExpressRouter } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
-const router = Router();
+const router: ExpressRouter = ExpressRouter();
 const BOOKING_SERVICE_URL = process.env.BOOKING_SERVICE_URL || 'http://localhost:3003';
 
 router.use(

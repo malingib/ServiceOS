@@ -133,7 +133,7 @@ export function errorTracking(err: Error, req: Request, _res: Response, next: Ne
 }
 
 export function ensureAuth(req: Request, _res: Response, next: NextFunction): void {
-  if (!(req as Record<string, unknown>).user) {
+  if (!(req as unknown as Record<string, unknown>).user) {
     next(new AuthenticationError());
   } else {
     next();

@@ -3,14 +3,15 @@ import type { Config } from 'jest';
 const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  rootDir: __dirname,
   roots: ['<rootDir>/apps', '<rootDir>/packages'],
   testMatch: ['**/__tests__/**/*.test.ts'],
   moduleNameMapper: {
     '^@mobiwave/(.*)$': '<rootDir>/packages/$1/src',
   },
-  setupFilesAfterSetup: ['<rootDir>/jest.setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.base.json' }],
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.base.json' }],
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
   testTimeout: 30000,

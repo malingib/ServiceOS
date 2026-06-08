@@ -52,7 +52,7 @@ export interface BookingCreatedEvent extends BaseEvent {
     customerId: string;
     serviceId: string;
     scheduledDate: string;
-    totalAmount: number;
+    totalAmountMinor: string;
     currency: string;
   };
 }
@@ -107,7 +107,7 @@ export interface PaymentInitiatedEvent extends BaseEvent {
     paymentId: string;
     bookingId: string;
     customerId: string;
-    amount: number;
+    amountMinor: string;
     currency: string;
     checkoutRequestId: string;
   };
@@ -120,7 +120,7 @@ export interface PaymentCompletedEvent extends BaseEvent {
     paymentId: string;
     bookingId: string;
     customerId: string;
-    amount: number;
+    amountMinor: string;
     currency: string;
     mpesaReceiptNumber: string;
   };
@@ -144,7 +144,7 @@ export interface PaymentRefundedEvent extends BaseEvent {
     tenantId: string;
     paymentId: string;
     bookingId: string;
-    amount: number;
+    amountMinor: string;
     currency: string;
   };
 }
@@ -254,7 +254,7 @@ export interface RewardReferralEarnedEvent extends BaseEvent {
     referralId: string;
     referrerId: string;
     referredId: string;
-    amount: number;
+    amountMinor: string;
   };
 }
 

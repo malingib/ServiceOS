@@ -6,6 +6,8 @@ ServiceOps is a unified field-service operations platform targeting the Kenyan a
 
 The architecture is designed as a **cloud-native, event-driven, multi-tenant system** with strict separation of concerns between scheduling, dispatch, payments, notifications, and core business logic. External systems (M-Pesa, WhatsApp, email, push) are treated as unreliable third parties; all critical business state changes are managed through internal state machines with eventual consistency guarantees.
 
+Operational hardening details for duplicate callbacks, reconciliation, booking concurrency, outbox delivery, worker offline handling, tenant isolation, and soft delete are captured in [ADR 0001](docs/adr/0001-operational-failure-hardening.md).
+
 ---
 
 ## Problem Analysis

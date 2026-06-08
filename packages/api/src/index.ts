@@ -112,7 +112,7 @@ export function createApiClient(baseUrl?: string): KyInstance {
 
 function getClient(): KyInstance {
   const clientKey = '__api_client__';
-  const global = globalThis as Record<string, KyInstance | undefined>;
+  const global = globalThis as unknown as Record<string, KyInstance | undefined>;
   if (!global[clientKey]) {
     global[clientKey] = createApiClient();
   }

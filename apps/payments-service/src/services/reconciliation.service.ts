@@ -16,7 +16,7 @@ export class ReconciliationService {
 
     const pendingPayments = await prisma.payment.findMany({
       where: {
-        status: { in: ['PENDING', 'PROCESSING'] },
+        status: 'INITIATED',
         createdAt: { gte: yesterday },
       },
     });
@@ -35,7 +35,7 @@ export class ReconciliationService {
           if (statusResponse.ResultCode === '0') {
             await prisma.payment.update({
               where: { id: payment.id },
-              data: { status: 'COMPLETED' },
+              data: { status: 'SUCCESS' },
             });
             completed++;
           } else if (

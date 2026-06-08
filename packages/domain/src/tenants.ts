@@ -15,7 +15,7 @@ export interface TenantSettings {
   country: string;
   currency: string;
   timezone: string;
-  commissionRatePercent?: string;
+  commissionRateBps?: number;
   paymentProviderPriority?: string[];
 }
 

@@ -1,20 +1,19 @@
 import type { Address, ISODateTime, Money, UUID } from "./shared";
 
 export type BookingStatus =
-  | "PENDING"
+  | "DRAFT"
+  | "AWAITING_PAYMENT"
   | "CONFIRMED"
   | "ASSIGNED"
-  | "ACCEPTED"
-  | "EN_ROUTE"
   | "IN_PROGRESS"
   | "COMPLETED"
+  | "REVIEWED"
   | "CANCELLED"
-  | "REFUNDED"
-  | "DECLINED"
-  | "NO_SHOW"
+  | "REFUND_PENDING"
+  | "REFUND_FAILED"
   | "STALLED"
   | "DISPUTED"
-  | "RESCHEDULED";
+  | "RESOLVED";
 
 export type RecurrenceFrequency = "DAILY" | "WEEKLY" | "MONTHLY";
 
@@ -30,7 +29,7 @@ export interface BookingSnapshot {
   serviceName: string;
   serviceCategory: string;
   durationMinutes: number;
-  basePrice: Money;
+  basePriceMinor: Money;
 }
 
 export interface BookingCustomerSnapshot {

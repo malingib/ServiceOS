@@ -65,9 +65,9 @@ export interface InfiniteScrollResponse<T> {
 export function useInfiniteScroll<T>(
   queryKey: QueryKey,
   fetcher: (params: InfiniteScrollParams) => Promise<InfiniteScrollResponse<T>>,
-  options?: Omit<UseInfiniteQueryOptions<InfiniteScrollResponse<T>, Error, InfiniteData<InfiniteScrollResponse<T>>, InfiniteScrollResponse<T>, QueryKey>, 'queryKey' | 'queryFn' | 'initialPageParam' | 'getNextPageParam'>,
+  options?: Omit<UseInfiniteQueryOptions<InfiniteScrollResponse<T>, Error, InfiniteData<InfiniteScrollResponse<T>>, QueryKey, InfiniteScrollParams>, 'queryKey' | 'queryFn' | 'initialPageParam' | 'getNextPageParam'>,
 ) {
-  return useInfiniteQuery<InfiniteScrollResponse<T>, Error, InfiniteData<InfiniteScrollResponse<T>>, QueryKey>({
+  return useInfiniteQuery<InfiniteScrollResponse<T>, Error, InfiniteData<InfiniteScrollResponse<T>>, QueryKey, InfiniteScrollParams>({
     queryKey,
     queryFn: ({ pageParam }) => fetcher(pageParam as InfiniteScrollParams),
     initialPageParam: { limit: 20 } as InfiniteScrollParams,

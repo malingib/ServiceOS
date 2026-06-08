@@ -48,7 +48,7 @@ describe('PaymentService', () => {
       const result = await paymentService.initiateStkPush({
         bookingId: mockBooking.id,
         phoneNumber: '+254700100200',
-        amount: 2500,
+        amountMinor: '2500',
         tenantId: mockTenant.id,
         customerId: mockUser.id,
       });
@@ -64,7 +64,7 @@ describe('PaymentService', () => {
       await expect(paymentService.initiateStkPush({
         bookingId: 'non-existent',
         phoneNumber: '+254700100200',
-        amount: 2500,
+        amountMinor: '2500',
         tenantId: mockTenant.id,
         customerId: mockUser.id,
       })).rejects.toThrow(NotFoundError);
@@ -77,7 +77,7 @@ describe('PaymentService', () => {
       await expect(paymentService.initiateStkPush({
         bookingId: mockBooking.id,
         phoneNumber: '+254700100200',
-        amount: 2500,
+        amountMinor: '2500',
         tenantId: mockTenant.id,
         customerId: mockUser.id,
       })).rejects.toThrow(ConflictError);
@@ -93,7 +93,7 @@ describe('PaymentService', () => {
       await expect(paymentService.initiateStkPush({
         bookingId: mockBooking.id,
         phoneNumber: '+254700100200',
-        amount: 2500,
+        amountMinor: '2500',
         tenantId: mockTenant.id,
         customerId: mockUser.id,
       })).rejects.toThrow('M-Pesa API error');
@@ -222,7 +222,7 @@ describe('PaymentService', () => {
       (mockedPrisma.payment.update as jest.Mock).mockResolvedValue({ ...mockPayment, status: 'REFUND_PENDING' });
       (mockedPrisma.ledgerEntry.create as jest.Mock).mockResolvedValue({ id: 'ledger-1' });
 
-      const result = await paymentService.initiateRefund(mockPayment.id, mockTenant.id, 2500);
+      const result = await paymentService.initiateRefund(mockPayment.id, mockTenant.id, '2500');
 
       expect(result.status).toBe('REFUND_PENDING');
       expect(mpesaService.initiateB2C).toHaveBeenCalled();
@@ -231,7 +231,7 @@ describe('PaymentService', () => {
     it('should reject refund for non-completed payment', async () => {
       (mockedPrisma.payment.findFirst as jest.Mock).mockResolvedValue({ ...mockPayment, status: 'PENDING' });
 
-      await expect(paymentService.initiateRefund(mockPayment.id, mockTenant.id, 2500))
+      await expect(paymentService.initiateRefund(mockPayment.id, mockTenant.id, '2500'))
         .rejects.toThrow(ConflictError);
     });
   });

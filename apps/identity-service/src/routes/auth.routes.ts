@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Router as ExpressRouter } from 'express';
 import { authController } from '../controllers/auth.controller';
 import { requireAuth } from '../middleware/requireAuth';
 import {
@@ -10,7 +10,7 @@ import {
   validateRequest,
 } from '@mobiwave/shared';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.post('/otp/request', (req, res, next) => {
   const result = otpRequestSchema.safeParse(req.body);

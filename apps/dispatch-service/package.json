@@ -7,17 +7,21 @@
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
-    "test": "jest --passWithNoTests"
+    "test": "jest --config ../../jest.config.ts apps/dispatch-service/src/__tests__ --passWithNoTests"
   },
   "dependencies": {
     "@mobiwave/shared": "workspace:*",
     "@mobiwave/prisma": "workspace:*",
     "express": "^4.19.2",
+    "helmet": "^7.1.0",
     "ioredis": "^5.4.1",
+    "morgan": "^1.10.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@mobiwave/testing": "workspace:*",
     "@types/express": "^4.17.21",
+    "@types/morgan": "^1.9.9",
     "@types/uuid": "^9.0.8",
     "tsx": "^4.15.0",
     "typescript": "^5.4.0"

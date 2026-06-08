@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Application } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { v4 as uuidv4 } from 'uuid';
@@ -6,7 +6,7 @@ import { corsMiddleware } from './middleware/cors';
 import { errorHandler, notFoundHandler, requestIdMiddleware, globalRateLimit } from '@mobiwave/shared';
 import { routeAggregator } from './routes';
 
-const app = express();
+const app: Application = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
 app.use(helmet());

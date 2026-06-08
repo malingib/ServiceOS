@@ -30,7 +30,7 @@ export interface MpesaConfig {
 
 export interface StkPushRequest {
   phoneNumber: string;
-  amount: number;
+  amountMinor: string | bigint;
   accountReference: string;
   transactionDesc?: string;
   partyA?: string;
@@ -64,7 +64,7 @@ export interface TransactionStatusResponse {
 
 export interface B2CRequest {
   recipientPhone: string;
-  amount: number;
+  amountMinor: string | bigint;
   reference: string;
   remarks?: string;
   occasion?: string;
@@ -197,7 +197,7 @@ export class MpesaClient {
       Password: password,
       Timestamp: timestamp,
       TransactionType: request.transactionType || 'CustomerPayBillOnline',
-      Amount: Math.round(request.amount).toString(),
+      Amount: request.amountMinor.toString(),
       PartyA: request.partyA || formatPhone(request.phoneNumber),
       PartyB: request.partyB || this.config.shortCode,
       PhoneNumber: formatPhone(request.phoneNumber),
@@ -247,7 +247,7 @@ export class MpesaClient {
       InitiatorName: this.config.initiatorName || 'testapi',
       SecurityCredential: this.config.securityCredential || '',
       CommandID: request.commandId || 'BusinessPayment',
-      Amount: Math.round(request.amount).toString(),
+      Amount: request.amountMinor.toString(),
       PartyA: this.config.shortCode,
       PartyB: formatPhone(request.recipientPhone),
       Remarks: request.remarks || request.reference,
@@ -350,8 +350,8 @@ export class IdempotencyHelper {
     return this.getResult(key) !== null;
   }
 
-  generateKey(phoneNumber: string, amount: number, accountRef: string): string {
-    return `mpesa:${formatPhone(phoneNumber)}:${amount}:${accountRef}:${uuidv4().slice(0, 8)}`;
+  generateKey(phoneNumber: string, amountMinor: string | bigint, accountRef: string): string {
+    return `mpesa:${formatPhone(phoneNumber)}:${amountMinor.toString()}:${accountRef}:${uuidv4().slice(0, 8)}`;
   }
 
   cleanup(): void {

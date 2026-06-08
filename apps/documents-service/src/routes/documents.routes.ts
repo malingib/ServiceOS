@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, Router as ExpressRouter } from 'express';
 import { documentsController } from '../controllers/documents.controller';
 import { requireAuth } from '@mobiwave/shared';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.post('/upload-url', requireAuth, (req, res, next) => documentsController.getUploadUrl(req, res, next));
 router.post('/confirm', requireAuth, (req, res, next) => documentsController.confirmUpload(req, res, next));

@@ -18,14 +18,14 @@ export class AnalyticsService {
     ] = await Promise.all([
       prisma.booking.count({ where: { tenantId } }),
       prisma.payment.aggregate({
-        where: { tenantId, status: 'COMPLETED' },
+        where: { tenantId, status: 'SUCCESS' },
         _sum: { amountNet: true },
       }),
       prisma.workerProfile.count({
         where: { tenantId, isAvailable: true },
       }),
       prisma.booking.count({
-        where: { tenantId, status: 'PENDING' },
+        where: { tenantId, status: 'AWAITING_PAYMENT' },
       }),
       prisma.booking.count({
         where: { tenantId, status: 'COMPLETED', completedAt: { gte: today, lt: tomorrow } },
@@ -40,7 +40,7 @@ export class AnalyticsService {
 
     return {
       totalBookings,
-      totalRevenue: Number(totalRevenue._sum.amountNet || 0),
+      totalRevenue: typeof totalRevenue === 'number' ? totalRevenue : Number(totalRevenue._sum.amountNet || 0),
       activeWorkers,
       pendingBookings,
       completedToday,

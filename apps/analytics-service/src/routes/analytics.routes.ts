@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, Router as ExpressRouter } from 'express';
 import { analyticsController } from '../controllers/analytics.controller';
 import { requireAuth } from '@mobiwave/shared';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.get('/dashboard', requireAuth, (req, res, next) => analyticsController.getDashboard(req, res, next));
 router.get('/bookings', requireAuth, (req, res, next) => analyticsController.getBookings(req, res, next));

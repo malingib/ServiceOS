@@ -1,13 +1,14 @@
 import type { ISODateTime, UUID } from "./shared";
 
-export type OutboxStatus = "PENDING" | "DISPATCHING" | "SENT" | "FAILED" | "DEAD";
+export type OutboxStatus = "PENDING" | "IN_FLIGHT" | "DELIVERED" | "FAILED_RETRY" | "DEAD";
 
 export interface DomainEventEnvelope<TType extends string = string, TPayload = Record<string, unknown>> {
   eventId: UUID;
   tenantId: UUID;
-  topic: string;
+  channel: string;
+  eventType: TType;
+  eventKey: string;
   type: TType;
-  key?: string;
   aggregateType: string;
   aggregateId: UUID;
   aggregateVersion?: number;
@@ -25,16 +26,19 @@ export interface OutboxRecord<TPayload = Record<string, unknown>>
   extends DomainEventEnvelope<string, TPayload> {
   outboxId: UUID;
   status: OutboxStatus;
-  retryCount: number;
+  attempts: number;
+  maxAttempts: number;
+  nextAttemptAt: ISODateTime;
   lastError?: string;
   createdAt: ISODateTime;
-  sentAt?: ISODateTime;
+  deliveredAt?: ISODateTime;
 }
 
 export interface OutboxInsertInput<TPayload = Record<string, unknown>> {
   tenantId: UUID;
-  topic: string;
-  key?: string;
+  channel: string;
+  eventType: string;
+  eventKey: string;
   aggregateType: string;
   aggregateId: UUID;
   payload: TPayload;
@@ -47,7 +51,7 @@ export interface OutboxInsertInput<TPayload = Record<string, unknown>> {
 
 export interface OutboxPollRequest {
   tenantId?: UUID;
-  topic?: string;
+  channel?: string;
   limit?: number;
 }
 

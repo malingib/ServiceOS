@@ -76,7 +76,7 @@ export class MpesaService {
 
   async initiateStkPush(data: {
     phoneNumber: string;
-    amount: number;
+    amountMinor: string | bigint;
     accountReference: string;
     transactionDesc: string;
   }): Promise<StkPushResponse> {
@@ -98,7 +98,7 @@ export class MpesaService {
         Password: password,
         Timestamp: timestamp,
         TransactionType: 'CustomerPayBillOnline',
-        Amount: Math.round(data.amount),
+        Amount: Number(data.amountMinor),
         PartyA: SafaricomPhone,
         PartyB: MPESA_SHORTCODE,
         PhoneNumber: SafaricomPhone,
@@ -146,7 +146,7 @@ export class MpesaService {
 
   async initiateB2C(data: {
     destinationPhone: string;
-    amount: number;
+    amountMinor: string | bigint;
     occasion?: string;
     remarks?: string;
   }): Promise<B2CResponse> {
@@ -165,7 +165,7 @@ export class MpesaService {
         InitiatorName: MPESA_INITIATOR_NAME,
         SecurityCredential: MPESA_SECURITY_CREDENTIAL,
         CommandID: 'BusinessPayment',
-        Amount: Math.round(data.amount),
+        Amount: Number(data.amountMinor),
         PartyA: MPESA_SHORTCODE,
         PartyB: SafaricomPhone,
         Remarks: data.remarks || 'ServiceOps Payment',

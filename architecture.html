@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ServiceOps — System Architecture</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #131a2e;
+    --panel-2: #1a2240;
+    --border: #28304e;
+    --text: #e6ebff;
+    --muted: #8a93b5;
+    --accent: #5eead4;
+    --accent-2: #818cf8;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --code-bg: #0a0f1f;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre, .mono {
+    font-family: "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 13px;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+  code:not(pre code) {
+    background: var(--panel-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--accent);
+    font-size: 0.9em;
+  }
+  pre code { color: var(--text); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.sidebar {
+    position: sticky; top: 0; align-self: start;
+    height: 100vh; overflow-y: auto;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 24px 18px;
+  }
+  nav.sidebar h1 { font-size: 16px; margin: 0 0 4px; color: var(--accent); letter-spacing: 0.5px; }
+  nav.sidebar .ver { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+  nav.sidebar ul { list-style: none; padding: 0; margin: 0; }
+  nav.sidebar li { margin: 2px 0; }
+  nav.sidebar a {
+    display: block; padding: 5px 8px; border-radius: 4px;
+    color: var(--muted); font-size: 13px;
+  }
+  nav.sidebar a:hover { background: var(--panel-2); color: var(--text); text-decoration: none; }
+  nav.sidebar .sub { padding-left: 18px; font-size: 12px; }
+  main.content { max-width: 1100px; margin: 0 auto; padding: 40px 60px 120px; }
+  h1, h2, h3, h4 { line-height: 1.3; margin-top: 1.6em; }
+  h1 { font-size: 32px; margin-top: 0; color: var(--text); }
+  h2 { font-size: 24px; border-bottom: 1px solid var(--border); padding-bottom: 6px; color: var(--text); }
+  h3 { font-size: 19px; color: var(--accent); }
+  h4 { font-size: 16px; color: var(--muted); }
+  p, li { color: var(--text); }
+  .lead { color: var(--muted); font-size: 16px; }
+  .meta { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin: 8px 0 32px; }
+  .meta span { padding: 3px 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 999px; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { background: var(--panel-2); color: var(--accent); font-weight: 600; }
+  tr:hover td { background: var(--panel); }
+  .mermaid { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 18px 0; overflow-x: auto; }
+  .chart-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin: 18px 0; }
+  .chart-wrap h4 { margin: 0 0 12px; color: var(--accent); }
+  .chart-canvas-wrap { position: relative; height: 320px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  .callout { background: var(--panel); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; border-radius: 0 8px 8px 0; }
+  .callout.warn { border-left-color: var(--warn); }
+  .callout.bad { border-left-color: var(--bad); }
+  .callout strong { color: var(--accent); }
+  .callout.warn strong { color: var(--warn); }
+  ul, ol { padding-left: 24px; }
+  li { margin: 4px 0; }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
+  @media print {
+    nav.sidebar { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main.content { padding: 20px; max-width: none; }
+    body { background: white; color: black; }
+    .mermaid, .chart-wrap { background: white; border-color: #ddd; page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<nav class="sidebar">
+  <h1>ServiceOps</h1>
+  <div class="ver">v0.1 · 2026-06-08</div>
+  <ul>
+    <li><a href="#vision">0. Vision &amp; Constraints</a></li>
+    <li><a href="#context">1. System Context</a></li>
+    <li><a href="#containers">2. Container Architecture</a></li>
+    <li><a href="#data">3. Data Model</a>
+      <ul class="sub">
+        <li><a href="#er-diagram">ERD</a></li>
+        <li><a href="#multi-tenant">Multi-tenancy</a></li>
+      </ul>
+    </li>
+    <li><a href="#state-machines">4. State Machines</a></li>
+    <li><a href="#modules">5. Backend Modules</a></li>
+    <li><a href="#flows">6. Key Flows</a></li>
+    <li><a href="#cross-cutting">7. Cross-Cutting</a></li>
+    <li><a href="#frontend">8. Frontend System</a></li>
+    <li><a href="#infra">9. Infrastructure</a></li>
+    <li><a href="#build-plan">10. Build Plan</a></li>
+    <li><a href="#capacity">11. Capacity Planning</a></li>
+    <li><a href="#open">12. Open Decisions</a></li>
+    <li><a href="#glossary">13. Glossary</a></li>
+  </ul>
+</nav>
+
+<main class="content">
+
+  <h1>ServiceOps — System Architecture</h1>
+  <div class="meta">
+    <span>v0.1 baseline</span>
+    <span>2026-06-08</span>
+    <span>Status: locked for MVP</span>
+  </div>
+  <p class="lead">Multi-tenant operations platform for service agencies in East Africa. Same code, same database, different tenant configuration — runs a 5-cleaner agency in Nyali and a 200-staff caregiving firm in Nairobi.</p>
+
+  <h2 id="vision">0. Vision &amp; Constraints</h2>
+
+  <h3>What we are building</h3>
+  <p>ServiceOps is a multi-tenant operations platform for service agencies. Day-one verticals:</p>
+  <ul>
+    <li>Domestic cleaning (one-off, weekly, deep clean)</li>
+    <li>House-help placement (interview → match → payroll)</li>
+    <li>Laundry pickup / delivery</li>
+    <li>Caregiving (elderly, post-natal, child)</li>
+    <li>Pest control</li>
+    <li>Property maintenance</li>
+  </ul>
+  <p>The platform itself is the product. Tenant configuration does the rest.</p>
+
+  <h3>What we are NOT building (yet)</h3>
+  <div class="callout warn">
+    <strong>Deferred post-MVP:</strong> consumer marketplace search, full CRM pipelines, native mobile apps, Cal.com / Novu / Budibase / NocoDB / Invoice Ninja / Keycloak / Twenty / n8n / OSRM / PostHog / Directus integrations.
+  </div>
+
+  <h3>Stack (locked for MVP)</h3>
+  <table>
+    <thead><tr><th>Layer</th><th>Choice</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Frontend</td><td>Next.js 15 (App Router, RSC)</td><td>Single codebase, route groups, server actions</td></tr>
+      <tr><td>API</td><td>Node.js + Express 5</td><td>Simple, well-known, easy to hire for</td></tr>
+      <tr><td>Language</td><td>TypeScript strict</td><td>Everywhere. No <code>any</code>.</td></tr>
+      <tr><td>ORM</td><td>Prisma</td><td>Schema-as-source-of-truth, great migrations</td></tr>
+      <tr><td>Database</td><td>PostgreSQL 16</td><td>tstzrange, exclusion constraints, RLS, JSONB</td></tr>
+      <tr><td>Cache / queue</td><td>Redis 7 + BullMQ</td><td>Idempotency cache, job queue, locks</td></tr>
+      <tr><td>Object storage</td><td>MinIO (S3-compatible)</td><td>Self-hosted, swap to S3/R2 later</td></tr>
+      <tr><td>Auth</td><td>NextAuth (phone OTP)</td><td>Day 1. Keycloak when B2B demands it.</td></tr>
+      <tr><td>SMS</td><td>Africa's Talking</td><td>Kenya + Uganda + Tanzania coverage</td></tr>
+      <tr><td>WhatsApp</td><td>WhatsApp Cloud API (direct)</td><td>Novu is overkill for MVP</td></tr>
+      <tr><td>Email</td><td>Resend</td><td>Best DX, generous free tier</td></tr>
+      <tr><td>Payments</td><td>M-Pesa Daraja via Lipana wrapper</td><td>Faster than building B2C/STK from scratch</td></tr>
+      <tr><td>Observability</td><td>Sentry + pino + OpenTelemetry</td><td>Day 1. Non-negotiable.</td></tr>
+      <tr><td>Hosting</td><td>Single Hetzner VPS to start</td><td>4 vCPU / 16 GB / 200 GB NVMe</td></tr>
+      <tr><td>CI/CD</td><td>GitHub Actions → Docker → VPS</td><td>No Kubernetes until 50+ tenants</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Architectural constitution (the 10 rules)</h3>
+  <ol>
+    <li><strong>Own the business model.</strong> Users, bookings, jobs, payments live in our DB. External systems are replaceable adapters.</li>
+    <li><strong>Treat every external call as eventually-delivered or never-delivered.</strong> Outbox pattern. No synchronous coupling.</li>
+    <li><strong>Multi-tenant data model from line 1.</strong> Enforce via RLS later. Don't retrofit.</li>
+    <li><strong>Money is integer minor units. Always.</strong> No floats, no decimals in code.</li>
+    <li><strong>No <code>DELETE</code> in production.</strong> Soft delete + PII redaction.</li>
+    <li><strong>Every state transition is auditable.</strong> Actor, from, to, at, reason.</li>
+    <li><strong>Idempotency keys on every mutation.</strong> Not just payments.</li>
+    <li><strong>Offline-first for workers.</strong> Local queue, sync on reconnect, conflict resolution.</li>
+    <li><strong>Job types are an enum, not separate tables.</strong> ServiceOps scales by adding enum values + service config.</li>
+    <li><strong>Single Next.js codebase.</strong> Route groups for personas, not separate apps.</li>
+  </ol>
+
+  <h2 id="context">1. System Context (C4 Level 1)</h2>
+  <p>The system in its environment — who uses it, what it talks to.</p>
+
+  <div class="mermaid">C4Context
+    title ServiceOps — System Context
+    Person(customer, "Customer", "Books services, pays via M-Pesa, gets WhatsApp updates")
+    Person(worker, "Field Worker", "Cleaner / caregiver / driver. PWA on phone.")
+    Person(candidate, "Candidate", "House-help / caregiver applicant")
+    Person(admin, "Agency Admin", "Owns a tenant. Manages workers, services, reports.")
+    Person(ops, "Ops Supervisor", "MobiWave internal. Handles escalations, recon.")
+    System(serviceops, "ServiceOps Platform", "Multi-tenant SaaS for service agencies")
+    System_Ext(mpesa, "M-Pesa Daraja", "STK Push, B2C, B2B")
+    System_Ext(lipana, "Lipana", "M-Pesa-as-a-Service wrapper")
+    System_Ext(at, "Africa's Talking", "SMS, USSD")
+    System_Ext(wa, "WhatsApp Cloud API", "Messaging, templates, webhooks")
+    System_Ext(email, "Resend", "Transactional email")
+    System_Ext(s3, "Object Storage (MinIO/S3)", "Photos, documents")
+    Rel(customer, serviceops, "Books, pays, tracks job", "HTTPS / WhatsApp")
+    Rel(worker, serviceops, "Accepts jobs, updates status", "HTTPS PWA")
+    Rel(candidate, serviceops, "Submits profile", "HTTPS / WhatsApp")
+    Rel(admin, serviceops, "Manages tenant", "HTTPS")
+    Rel(serviceops, lipana, "STK Push, B2C", "HTTPS")
+    Rel(lipana, mpesa, "Daraja API", "HTTPS")
+    Rel(serviceops, at, "SMS", "HTTPS")
+    Rel(serviceops, wa, "Messages", "HTTPS")
+    Rel(serviceops, email, "Sends", "HTTPS")
+    Rel(serviceops, s3, "Presigned URLs", "HTTPS")
+  </div>
+
+  <div class="callout">
+    <strong>Key insight:</strong> All inbound customer touchpoints funnel into the same Express API. The browser, the PWA, and the WhatsApp bot are all clients. The API and DB are the source of truth.
+  </div>
+
+  <h2 id="containers">2. Container Architecture (C4 Level 2)</h2>
+
+  <div class="mermaid">C4Container
+    title ServiceOps — Container View
+    Person(customer, "Customer", "")
+    Person(worker, "Worker", "")
+    Person(admin, "Admin", "")
+    System_Boundary(c1, "ServiceOps Platform") {
+      Container(web, "Web App", "Next.js 15", "SSR + RSC. Customer/Worker/Admin in one codebase.")
+      Container(api, "API", "Express 5", "REST. All business logic.")
+      Container(workers, "Job Workers", "BullMQ + Node", "M-Pesa recon, WhatsApp, notifications, cron")
+      Container(bot, "WhatsApp Bot", "Express webhook", "Receives messages, calls API")
+      ContainerDb(postgres, "PostgreSQL 16", "Database", "Source of truth. RLS enabled.")
+      ContainerDb(redis, "Redis 7", "Cache + Queue", "BullMQ, idempotency, rate limits")
+      ContainerDb(minio, "MinIO", "Object Storage", "Photos, ID docs, contracts")
+    }
+    System_Ext(mpesa, "M-Pesa / Lipana", "")
+    System_Ext(at, "Africa's Talking", "")
+    System_Ext(wa, "WhatsApp Cloud API", "")
+    Rel(customer, web, "Uses", "HTTPS")
+    Rel(worker, web, "PWA", "HTTPS")
+    Rel(admin, web, "Uses", "HTTPS")
+    Rel(customer, bot, "Chats", "WhatsApp")
+    Rel(bot, api, "Calls", "HTTPS")
+    Rel(web, api, "Reads/writes", "HTTPS")
+    Rel(api, postgres, "Reads/writes", "PG")
+    Rel(api, redis, "Cache, locks, queue", "RESP")
+    Rel(api, minio, "Presigned URLs", "S3 API")
+    Rel(api, mpesa, "STK / B2C", "HTTPS")
+    Rel(api, at, "SMS", "HTTPS")
+    Rel(api, wa, "Messages", "HTTPS")
+    Rel(workers, postgres, "Process jobs", "PG")
+    Rel(workers, redis, "Pull queue", "RESP")
+    Rel(workers, mpesa, "Reconcile", "HTTPS")
+    Rel(wa, bot, "Webhooks", "HTTPS")
+    Rel(wa, api, "Status webhooks", "HTTPS")
+  </div>
+
+  <h3>Day-1 deployment topology (single VPS)</h3>
+  <div class="mermaid">flowchart TB
+    subgraph vps["Hetzner VPS — cx31 (4 vCPU / 16 GB / 200 GB NVMe)"]
+      caddy["Caddy :443<br/>reverse proxy + auto-TLS"]
+      subgraph apps["Docker compose"]
+        web["nextjs<br/>:3000"]
+        api["express<br/>:4000"]
+        bot["whatsapp-bot<br/>:4100"]
+        workers["bullmq-workers<br/>(3 replicas)"]
+      end
+      subgraph data["Docker compose"]
+        pg["postgres:16<br/>:5432"]
+        redis["redis:7<br/>:6379"]
+        minio["minio<br/>:9000/:9001"]
+      end
+      backup["restic → b2<br/>(nightly)"]
+    end
+    sentry["Sentry<br/>(errors + tracing)"]
+    caddy --> web
+    caddy --> api
+    caddy --> bot
+    caddy --> minio
+    api --> pg
+    api --> redis
+    api --> minio
+    workers --> pg
+    workers --> redis
+    web -.->|limited| pg
+    bot --> api
+    backup -.-> pg
+    api -.-> sentry
+    web -.-> sentry
+    workers -.-> sentry
+  </div>
+
+  <h2 id="data">3. Data Model</h2>
+
+  <h3 id="er-diagram">3.1 Core ERD</h3>
+  <div class="mermaid">erDiagram
+    TENANT ||--o{ USER : has
+    TENANT ||--o{ SERVICE : defines
+    TENANT ||--o{ BOOKING : owns
+    TENANT ||--o{ WORKER : employs
+    TENANT ||--o{ CUSTOMER : serves
+    TENANT ||--o{ PAYMENT : receives
+    CUSTOMER ||--o{ BOOKING : creates
+    CUSTOMER ||--o{ REVIEW : submits
+    CUSTOMER ||--o{ REFERRAL : owns
+    WORKER ||--o{ JOB : assigned
+    BOOKING ||--|| JOB : generates
+    BOOKING ||--o{ PAYMENT : paid_by
+    JOB ||--o{ JOB_EVENT : logs
+    PAYMENT ||--|| LEDGER_ENTRY : mirrored
+    OUTBOX ||--|| JOB : originates
+    BOOKING {
+      uuid id PK
+      uuid tenant_id FK
+      enum status
+      timestamptz scheduled_start
+      bigint price_minor
+      jsonb cancellation_policy_snapshot
+    }
+    JOB {
+      uuid id PK
+      uuid booking_id FK
+      uuid worker_id FK
+      enum job_type
+      enum status
+    }
+    PAYMENT {
+      uuid id PK
+      uuid booking_id FK
+      string checkout_request_id
+      bigint amount_gross_minor
+      enum status
+    }
+    OUTBOX {
+      uuid id PK
+      string channel
+      string event_type
+      string event_key
+      jsonb payload
+      enum status
+    }
+  </div>
+
+  <h3>3.2 Critical constraints</h3>
+  <pre><code>-- Concurrency: no two CONFIRMED/IN_PROGRESS bookings for the same worker
+ALTER TABLE bookings ADD CONSTRAINT no_worker_double_book
+  EXCLUDE USING gist (
+    worker_id WITH =,
+    tstzrange(scheduled_start, scheduled_end) WITH &&amp;
+  ) WHERE (status IN ('CONFIRMED', 'IN_PROGRESS'));
+
+-- Idempotency: M-Pesa callbacks
+ALTER TABLE payments ADD CONSTRAINT uniq_mpesa_callback
+  UNIQUE (merchant_request_id, checkout_request_id);
+
+-- Outbox: at-least-once delivery
+ALTER TABLE outbox ADD CONSTRAINT uniq_outbox_event
+  UNIQUE (event_type, event_key);
+
+-- Optimistic concurrency
+ALTER TABLE bookings ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
+</code></pre>
+
+  <h3 id="multi-tenant">3.3 Multi-tenancy strategy</h3>
+  <div class="callout">
+    <strong>Rule:</strong> <code>tenant_id UUID NOT NULL</code> on every domain table from migration #1. Enforce via Postgres Row-Level Security. Even single-tenant on day 1.
+  </div>
+  <pre><code>ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_bookings ON bookings
+  USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
+
+ALTER TABLE bookings FORCE ROW LEVEL SECURITY;
+</code></pre>
+  <p>API middleware extracts <code>tenant_id</code> from the JWT, then sets the session GUC for RLS. Every query path has a "cross-tenant access denied" test.</p>
+
+  <h2 id="state-machines">4. State Machines</h2>
+
+  <h3>4.1 Booking lifecycle</h3>
+  <div class="mermaid">stateDiagram-v2
+    [*] --> DRAFT
+    DRAFT --> AWAITING_PAYMENT
+    DRAFT --> CANCELLED
+    AWAITING_PAYMENT --> CONFIRMED
+    AWAITING_PAYMENT --> CANCELLED: payment timeout
+    CONFIRMED --> ASSIGNED
+    ASSIGNED --> CONFIRMED: assignment failed
+    CONFIRMED --> IN_PROGRESS
+    CONFIRMED --> CANCELLED
+    CONFIRMED --> REFUND_PENDING
+    IN_PROGRESS --> COMPLETED
+    IN_PROGRESS --> STALLED: 5 heartbeats missed
+    STALLED --> IN_PROGRESS
+    STALLED --> CANCELLED
+    COMPLETED --> REVIEWED
+    COMPLETED --> DISPUTED
+    DISPUTED --> RESOLVED
+    REFUND_PENDING --> CANCELLED: B2C confirmed
+    COMPLETED --> [*]
+    CANCELLED --> [*]
+    REVIEWED --> [*]
+    RESOLVED --> [*]
+  </div>
+
+  <h3>4.2 Job lifecycle</h3>
+  <div class="mermaid">stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> ASSIGNED
+    ASSIGNED --> ACCEPTED
+    ASSIGNED --> DECLINED
+    ASSIGNED --> NO_SHOW
+    ACCEPTED --> EN_ROUTE
+    EN_ROUTE --> IN_PROGRESS
+    EN_ROUTE --> IN_PROGRESS
+    EN_ROUTE --> NO_SHOW
+    IN_PROGRESS --> COMPLETED
+    IN_PROGRESS --> STALLED
+    STALLED --> IN_PROGRESS
+    DECLINED --> PENDING: reassignment
+    NO_SHOW --> PENDING: reassignment
+    PENDING --> CANCELLED
+    COMPLETED --> [*]
+    CANCELLED --> [*]
+  </div>
+
+  <h3>4.3 Payment lifecycle</h3>
+  <div class="mermaid">stateDiagram-v2
+    [*] --> INITIATED
+    INITIATED --> SUCCESS
+    INITIATED --> FAILED
+    INITIATED --> UNKNOWN
+    UNKNOWN --> SUCCESS
+    UNKNOWN --> FAILED
+    UNKNOWN --> RECONCILED
+    SUCCESS --> REFUND_PENDING
+    REFUND_PENDING --> REFUNDED
+    REFUND_PENDING --> REFUND_FAILED
+    REFUND_FAILED --> REFUNDED
+    SUCCESS --> [*]
+    FAILED --> [*]
+    REFUNDED --> [*]
+    RECONCILED --> [*]
+  </div>
+
+  <h3>4.4 Outbox message lifecycle</h3>
+  <div class="mermaid">stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> IN_FLIGHT
+    IN_FLIGHT --> DELIVERED
+    IN_FLIGHT --> FAILED_RETRY
+    FAILED_RETRY --> PENDING
+    IN_FLIGHT --> DEAD
+    DELIVERED --> [*]
+    DEAD --> [*]
+  </div>
+
+  <h2 id="modules">5. Backend Modules</h2>
+  <pre><code>apps/api/src/
+├── modules/
+│   ├── auth/          (controller, service, repository, policy, types)
+│   ├── tenant/
+│   ├── customer/
+│   ├── worker/
+│   ├── service-catalog/
+│   ├── booking/       (controller, service, repository, fsm, policy)
+│   ├── job/
+│   ├── assignment/    (dispatch engine)
+│   ├── payment/
+│   │   ├── mpesa/
+│   │   ├── ledger/
+│   │   └── refund/
+│   ├── notification/  (channels/sms, whatsapp, email; outbox/)
+│   ├── review/
+│   ├── referral/
+│   ├── placement/
+│   ├── file/
+│   └── audit/
+├── shared/
+│   ├── db/            (prisma, tenant-context)
+│   ├── queue/
+│   ├── events/
+│   ├── http/
+│   ├── auth/
+│   ├── money/
+│   ├── time/
+│   ├── errors/
+│   ├── logger/
+│   └── observability/
+├── workers/
+│   ├── mpesa-reconciliation.worker.ts
+│   ├── whatsapp-sender.worker.ts
+│   ├── notification-dispatcher.worker.ts
+│   └── outbox-drain.worker.ts
+├── routes/
+├── app.ts
+└── server.ts
+</code></pre>
+
+  <div class="callout">
+    <strong>Module rules:</strong> modules never import another module's repo directly. Cross-module events go through the outbox, not in-process function calls. Each module exposes a <code>policy.ts</code> (who can call what) and a <code>types.ts</code> (DTOs).
+  </div>
+
+  <h2 id="flows">6. Key Flows</h2>
+
+  <h3>6.1 M-Pesa payment with idempotency</h3>
+  <div class="mermaid">sequenceDiagram
+    autonumber
+    participant C as Customer
+    participant MP as M-Pesa
+    participant API as Express
+    participant DB as Postgres
+    participant Q as BullMQ
+    Note over API,Q: STK Push initiated (from outbox)
+    API->>MP: POST /stkpush/v1/processrequest
+    MP-->>API: CheckoutRequestID, ResponseCode: 0
+    API->>DB: UPDATE payments SET status=INITIATED
+    API->>Q: schedule status query in 25s
+    C->>MP: Enter PIN
+    MP->>API: POST /mpesa/callback
+    API->>DB: SELECT FOR UPDATE payments WHERE c_request_id
+    alt first time
+      API->>DB: validate amount matches booking
+      API->>DB: BEGIN
+      API->>DB: UPDATE payments SET status=SUCCESS
+      API->>DB: UPDATE booking SET status=CONFIRMED
+      API->>DB: INSERT outbox
+      API->>DB: INSERT ledger_entry
+      API->>DB: COMMIT
+    else already processed
+      API-->>MP: 200 OK (idempotent)
+    end
+    Note over Q: If 60s passed without callback
+    Q->>API: status query job
+    API->>MP: POST /transactionstatus/v1/query
+    MP-->>API: ResultCode
+    API->>DB: act on result
+  </div>
+
+  <h3>6.2 Worker offline sync</h3>
+  <div class="mermaid">sequenceDiagram
+    autonumber
+    actor W as Worker
+    participant App as Worker PWA
+    participant IDB as IndexedDB
+    participant API as Express
+    participant DB as Postgres
+    Note over App: At job site, no signal
+    W->>App: Tap "Start Job"
+    App->>IDB: append event
+    App->>App: optimistic UI
+    Note over App: Connection returns
+    App->>API: POST /sync (batch)
+    API->>DB: BEGIN
+    loop each event
+      API->>DB: validate version
+      alt no conflict
+        API->>DB: apply event
+      else conflict
+        API->>DB: store in conflicts table
+      end
+    end
+    API->>DB: COMMIT
+    API-->>App: applied + conflicts
+    App->>IDB: clear applied
+  </div>
+
+  <h3>6.3 Cancellation with refund</h3>
+  <div class="mermaid">sequenceDiagram
+    autonumber
+    actor C as Customer
+    participant API as Booking Service
+    participant P as Payment Service
+    participant DB as Postgres
+    participant MP as M-Pesa B2C
+    participant Q as BullMQ
+    C->>API: POST /bookings/:id/cancel
+    API->>DB: load booking, payment, policy
+    API->>API: compute refund_amount
+    API->>DB: BEGIN
+    API->>DB: UPDATE booking SET status=REFUND_PENDING
+    API->>DB: INSERT refund
+    API->>DB: INSERT outbox (payment.b2c_refund)
+    API->>DB: COMMIT
+    Q->>P: refund job
+    P->>MP: POST /b2c/v1/paymentrequest
+    MP-->>P: OriginatorConversationID
+    MP->>P: POST /b2c/callback (async)
+    P->>DB: UPDATE refund SET status=SUCCESS
+    P->>DB: UPDATE booking SET status=CANCELLED
+    P->>DB: INSERT ledger_entry
+  </div>
+
+  <h2 id="cross-cutting">7. Cross-Cutting Concerns</h2>
+
+  <h3>7.1 Outbox pattern</h3>
+  <div class="callout">
+    <strong>Rule:</strong> every external call is initiated from a row in <code>outbox</code>, written in the same transaction as the business state change. A worker drains the outbox.
+  </div>
+  <pre><code>CREATE TABLE outbox (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL,
+  channel         TEXT NOT NULL,        -- 'whatsapp' | 'sms' | 'email' | 'mpesa_stk' | 'mpesa_b2c'
+  event_type      TEXT NOT NULL,
+  event_key       TEXT NOT NULL,        -- idempotency key
+  payload         JSONB NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'pending',
+  attempts        INT  NOT NULL DEFAULT 0,
+  next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  delivered_at    TIMESTAMPTZ,
+  last_error      TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX uniq_outbox_event ON outbox (event_type, event_key);
+</code></pre>
+  <p>Drain worker uses <code>FOR UPDATE SKIP LOCKED</code> to claim batches, dispatches via WhatsApp / M-Pesa / SMS, marks delivered or schedules retry with backoff (1s, 5s, 30s, 5m, 30m). After <code>max_attempts</code>, marks <code>DEAD</code> and alerts ops.</p>
+
+  <h3>7.2 Idempotency</h3>
+  <p>Every mutation endpoint accepts <code>Idempotency-Key: &lt;uuid&gt;</code>. Server caches the response for 24h. <strong>Not just payments — every POST/PUT/PATCH.</strong></p>
+
+  <h3>7.3 Money</h3>
+  <ul>
+    <li>All money as <code>BIGINT</code> minor units in DB. Never <code>Number</code> in code.</li>
+    <li>API accepts money as <code>{ minor: "2500", currency: "KES" }</code>. Never decimals.</li>
+    <li>Separate <code>amount_gross</code>, <code>amount_fee</code>, <code>amount_net</code> columns.</li>
+    <li><strong>Ledger table</strong> separate from <code>payments</code>. <code>payments</code> = gateway record; <code>ledger</code> = authoritative double-entry view.</li>
+  </ul>
+
+  <h3>7.4 Soft delete + PII redaction</h3>
+  <p>Prisma middleware injects <code>WHERE deleted_at IS NULL</code> on every read. <strong>No <code>DELETE</code> in production.</strong> On Kenya DPA erasure request: scrub <code>name</code>, <code>phone</code>, <code>email</code> to <code>REDACTED-&lt;id&gt;</code> but keep the row for accounting.</p>
+
+  <h3>7.5 Audit log</h3>
+  <p>Every state transition writes a <code>job_event</code> row in the <strong>same transaction</strong>. Append-only. Partitioned monthly.</p>
+
+  <h3>7.6 Observability</h3>
+  <table>
+    <thead><tr><th>Signal</th><th>Tool</th><th>Day 1</th><th>Post-MVP</th></tr></thead>
+    <tbody>
+      <tr><td>Errors</td><td>Sentry</td><td>Free tier</td><td>Team plan</td></tr>
+      <tr><td>Logs</td><td>pino</td><td>journalctl</td><td>Loki</td></tr>
+      <tr><td>Metrics</td><td>Prometheus + Grafana</td><td>—</td><td>✓</td></tr>
+      <tr><td>Uptime</td><td>UptimeRobot / BetterStack</td><td>Free</td><td>BetterStack</td></tr>
+      <tr><td>Tracing</td><td>OpenTelemetry</td><td>Sentry basic</td><td>Tempo</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="frontend">8. Frontend System</h2>
+
+  <h3>8.1 Application structure</h3>
+  <pre><code>apps/web/app/
+├── (public)/                 # unauthenticated
+│   ├── page.tsx              # landing
+│   ├── services/[slug]/page.tsx
+│   ├── pricing/page.tsx
+│   └── auth/{sign-in,sign-up,verify}/page.tsx
+├── (customer)/               # authenticated customer
+│   ├── layout.tsx            # auth guard + customer shell
+│   ├── dashboard/page.tsx
+│   ├── book/                 # 5-step funnel
+│   │   ├── service/page.tsx
+│   │   ├── schedule/page.tsx
+│   │   ├── address/page.tsx
+│   │   ├── review/page.tsx
+│   │   └── confirm/page.tsx
+│   ├── bookings/[id]/page.tsx
+│   ├── payments/page.tsx
+│   ├── referrals/page.tsx
+│   └── profile/page.tsx
+├── (worker)/                 # PWA
+│   ├── jobs/[id]/page.tsx
+│   ├── earnings/page.tsx
+│   └── schedule/page.tsx
+├── (admin)/                  # admin shell
+│   ├── dashboard/page.tsx
+│   ├── bookings/, customers/, workers/
+│   └── reports/, settings/
+├── api/                      # route handlers
+│   ├── auth/[...nextauth]/route.ts
+│   ├── webhooks/{mpesa,whatsapp}/route.ts
+│   └── cron/reconcile/route.ts
+└── layout.tsx
+</code></pre>
+
+  <h3>8.2 Route groups &amp; persona shells</h3>
+  <div class="mermaid">flowchart TD
+    Root["/ (root layout)"]
+    Root --> Public["(public)<br/>marketing layout"]
+    Root --> Customer["(customer)<br/>auth guard, nav, footer"]
+    Root --> Worker["(worker)<br/>auth guard, PWA shell, bottom nav"]
+    Root --> Admin["(admin)<br/>auth guard, sidebar, role gate"]
+    Public --> Landing["/ landing"]
+    Customer --> Dash["/dashboard"]
+    Customer --> Book["/book (5 steps)"]
+    Customer --> Bookings["/bookings"]
+    Worker --> Jobs["/jobs, /jobs/[id]"]
+    Worker --> Earnings["/earnings"]
+    Admin --> ADash["/dashboard"]
+    Admin --> ABookings["/bookings"]
+    Admin --> AWorkers["/workers"]
+    Admin --> AReports["/reports"]
+  </div>
+
+  <h3>8.3 Component architecture</h3>
+  <div class="mermaid">flowchart LR
+    Page["Page (RSC)"] -->|"server fetch"| API["API client"]
+    Page --> Shell["Persona shell"]
+    Shell --> ClientBoundary["'use client' boundary"]
+    ClientBoundary --> Forms["Forms (RHF + zod)"]
+    ClientBoundary --> Widgets["Interactive widgets"]
+    Forms --> FormState["RHF state"]
+    Forms --> Validation["zod schema (shared with API)"]
+    Forms --> Mutation["useMutation hook"]
+    Mutation --> APIClient["fetch wrapper"]
+    APIClient -->|"Idempotency-Key"| API
+    APIClient -->|"Sentry tracing"| Sentry
+  </div>
+
+  <h3>8.4 State management</h3>
+  <table>
+    <thead><tr><th>State type</th><th>Tool</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Server data</td><td>RSC + <code>revalidatePath</code></td><td>One-trip, fresh, no client cache</td></tr>
+      <tr><td>Form state</td><td>React Hook Form</td><td>Standard, validation integrated</td></tr>
+      <tr><td>UI state</td><td>URL search params</td><td>Bookmarkable, back-button works</td></tr>
+      <tr><td>Auth</td><td>NextAuth <code>useSession</code></td><td>Built-in</td></tr>
+      <tr><td>Toasts</td><td>sonner</td><td>One provider</td></tr>
+      <tr><td>Optimistic</td><td><code>useOptimistic</code></td><td>React 19, no library</td></tr>
+      <tr><td>Offline queue</td><td>IndexedDB + TanStack Query</td><td>Only place with client cache</td></tr>
+      <tr><td>Booking funnel flow</td><td>zustand</td><td>Cross-step state</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.5 Auth flow (phone OTP)</h3>
+  <div class="mermaid">sequenceDiagram
+    autonumber
+    actor U as User
+    participant W as Web/PWA
+    participant NA as NextAuth
+    participant AT as Africa's Talking
+    participant DB as Postgres
+    U->>W: Enter phone
+    W->>NA: signIn('phone', { phone })
+    NA->>AT: Send SMS (6-digit code)
+    NA->>DB: store code hash, expires_at
+    U->>W: Enter code
+    W->>NA: verifyOtp(code)
+    NA->>DB: match, delete
+    NA->>DB: upsert user
+    NA->>NA: JWT { sub, tenant, role, exp: 7d }
+    NA->>W: set session cookie
+  </div>
+
+  <h3>8.6 Form strategy: zod as single source of truth</h3>
+  <pre><code>// lib/validation/booking.ts
+export const createBookingSchema = z.object({
+  serviceCode: z.string().min(1),
+  scheduledStart: z.string().datetime(),
+  addressId: z.string().uuid(),
+  notes: z.string().max(500).optional(),
+}).refine(
+  (d) => new Date(d.scheduledStart) > new Date(),
+  { message: 'Scheduled time must be in the future', path: ['scheduledStart'] }
+);
+
+export type CreateBookingInput = z.infer&lt;typeof createBookingSchema&gt;;
+
+// components/forms/booking-form.tsx
+'use client';
+const form = useForm&lt;CreateBookingInput&gt;({
+  resolver: zodResolver(createBookingSchema),
+});
+
+const mutation = useMutation({
+  mutationFn: (input) => apiClient.post('/bookings', input),
+  onSuccess: (booking) => router.push(`/bookings/${booking.id}`),
+});
+</code></pre>
+
+  <h3>8.7 PWA / Offline (worker app)</h3>
+  <div class="mermaid">flowchart TB
+    subgraph Browser["Worker PWA"]
+      UI["UI (Next.js)"]
+      SW["Service Worker"]
+      IDB[("IndexedDB<br/>jobs, queue, cache")]
+      TQ["TanStack Query<br/>(persistent)"]
+    end
+    UI <--> TQ
+    TQ <--> IDB
+    SW <--> IDB
+    SW <--> Net["Network"]
+    Net --> API["Express API"]
+  </div>
+  <ul>
+    <li>Service worker registered for <code>/worker/*</code> only.</li>
+    <li>Cache-first for static, network-first for <code>/api/worker/jobs*</code> with IndexedDB fallback.</li>
+    <li>Offline mutations queued in IndexedDB. Drained on <code>online</code> event or background sync.</li>
+    <li><strong>Conflict resolution is server-authoritative</strong>: client sends <code>last_known_version</code>; server returns 409 + current state if conflict.</li>
+    <li>Push notifications for new assignments via Web Push API with VAPID keys.</li>
+  </ul>
+
+  <h3>8.8 Performance budget</h3>
+  <table>
+    <thead><tr><th>Page</th><th>LCP (p75)</th><th>TTI (p75)</th><th>JS budget</th></tr></thead>
+    <tbody>
+      <tr><td>Landing</td><td>&lt; 1.5s</td><td>&lt; 2.0s</td><td>&lt; 100 KB</td></tr>
+      <tr><td>Customer dashboard</td><td>&lt; 1.5s</td><td>&lt; 2.0s</td><td>&lt; 150 KB</td></tr>
+      <tr><td>Booking funnel</td><td>&lt; 1.5s</td><td>&lt; 2.0s</td><td>&lt; 150 KB</td></tr>
+      <tr><td>Worker job list</td><td>&lt; 1.0s</td><td>&lt; 1.5s</td><td>&lt; 100 KB</td></tr>
+      <tr><td>Admin dashboard</td><td>&lt; 2.0s</td><td>&lt; 2.5s</td><td>&lt; 250 KB</td></tr>
+    </tbody>
+  </table>
+  <p>Enforced by Lighthouse CI in GitHub Actions, fails PR if budget exceeded.</p>
+
+  <h2 id="infra">9. Infrastructure &amp; Deployment</h2>
+
+  <h3>9.1 Service deployment (docker-compose, Day 1)</h3>
+  <pre><code>services:
+  caddy:
+    image: caddy:2
+    volumes: [./Caddyfile:/etc/caddy/Caddyfile, caddy_data:/data]
+    ports: ["80:80", "443:443"]
+    depends_on: [web, api, bot, minio]
+    restart: unless-stopped
+
+  web:
+    build: ./apps/web
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - API_INTERNAL_URL=http://api:4000
+
+  api:
+    build: ./apps/api
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - LIPANA_API_KEY=${LIPANA_API_KEY}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
+      - AT_API_KEY=${AT_API_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - SENTRY_DSN=${SENTRY_DSN}
+    depends_on: [postgres, redis, minio]
+
+  bot:
+    build: ./apps/bot
+    depends_on: [api]
+
+  workers:
+    build: ./apps/api
+    command: ["node", "dist/workers/index.js"]
+    deploy: { replicas: 3 }
+    depends_on: [postgres, redis]
+
+  postgres: { image: postgres:16, volumes: [pgdata:/var/lib/postgresql/data] }
+  redis:    { image: redis:7, command: ["redis-server", "--appendonly", "yes"] }
+  minio:    { image: minio/minio, command: ["server", "/data", "--console-address", ":9001"] }
+</code></pre>
+
+  <h3>9.2 Backups</h3>
+  <ul>
+    <li><strong>Postgres:</strong> <code>pg_basebackup</code> daily + WAL archiving to Backblaze B2 via restic. PITR to 7 days.</li>
+    <li><strong>MinIO:</strong> <code>mc mirror</code> nightly to B2.</li>
+    <li><strong>Config:</strong> compose, Caddyfile, .env, Prisma migrations all in git.</li>
+    <li><strong>Restore drill:</strong> monthly, documented runbook.</li>
+  </ul>
+
+  <h3>9.3 CI/CD</h3>
+  <div class="mermaid">flowchart LR
+    PR["PR opened"] --> CI["GitHub Actions"]
+    CI --> Lint["lint + typecheck"]
+    CI --> Test["unit + integration"]
+    CI --> Migrations["prisma migrate diff"]
+    CI --> LH["Lighthouse CI"]
+    CI --> Build["docker build"]
+    main["Merge to main"] --> Deploy
+    Deploy --> SSH["ssh deploy@vps"]
+    SSH --> Pull["git pull"]
+    SSH --> Migrate["prisma migrate deploy"]
+    SSH --> Up["docker compose up -d"]
+    SSH --> Smoke["smoke tests"]
+  </div>
+
+  <h2 id="build-plan">10. Build Plan (Gantt)</h2>
+  <p>8 weeks, MVP scope. Critical path: Foundation → Booking + Job → Admin → Hardening.</p>
+  <div class="mermaid">gantt
+    title ServiceOps MVP — Build Plan (8 weeks)
+    dateFormat  YYYY-MM-DD
+    axisFormat  %b %d
+    section Foundation
+    Monorepo + tooling + CI                :foundation-1, 2026-06-09, 3d
+    Postgres + Prisma + RLS                :foundation-2, after foundation-1, 3d
+    NextAuth + phone OTP                   :foundation-3, after foundation-1, 3d
+    BullMQ + outbox skeleton               :foundation-4, after foundation-2, 2d
+    section Customer Portal
+    Public pages                           :customer-1, after foundation-3, 2d
+    Auth pages                             :customer-2, after foundation-3, 2d
+    Customer dashboard                     :customer-3, after customer-2, 3d
+    section Booking + Job
+    Booking module + FSM                   :booking-1, after foundation-4, 4d
+    Job module + FSM                       :booking-2, after booking-1, 3d
+    Booking funnel UI                      :booking-3, after customer-3, 4d
+    Worker PWA + offline                   :booking-4, after foundation-4, 5d
+    section Payments
+    Lipana + STK Push                      :payments-1, after foundation-4, 4d
+    M-Pesa callback + idempotency          :payments-2, after payments-1, 3d
+    B2C refund flow                        :payments-3, after payments-2, 3d
+    Reconciliation worker                  :payments-4, after payments-2, 2d
+    section Comms
+    WhatsApp Cloud API                     :comms-1, after foundation-4, 3d
+    Africa's Talking SMS                   :comms-2, after comms-1, 2d
+    Outbox drain worker                    :comms-3, after comms-1, 2d
+    WhatsApp bot                           :comms-4, after comms-1, 4d
+    section Admin
+    Admin shell + RBAC                     :admin-1, after customer-3, 2d
+    Bookings + customers                   :admin-2, after admin-1, 3d
+    Workers + assignment                   :admin-3, after admin-2, 4d
+    Reports + settings                     :admin-4, after admin-3, 3d
+    section Verticals
+    Laundry module                         :laundry-1, after booking-2, 5d
+    Placement module                       :placement-1, after booking-2, 6d
+    Caregiver module                       :caregiver-1, after booking-2, 5d
+    section Hardening
+    RLS enforcement                        :harden-1, after foundation-4, 5d
+    Soft delete + PII                      :harden-2, after booking-2, 2d
+    Audit + observability                  :harden-3, after booking-2, 3d
+    Load test + chaos                      :harden-4, after admin-4, 3d
+    Pilot with 1 tenant                    :harden-5, after harden-4, 5d
+  </div>
+
+  <h2 id="capacity">11. Capacity Planning</h2>
+
+  <h3>11.1 Request mix projections</h3>
+  <div class="grid-2">
+    <div class="chart-wrap">
+      <h4>Customer Portal — request mix (Day 1, ~500 customers)</h4>
+      <div class="chart-canvas-wrap"><canvas id="customerMix"></canvas></div>
+    </div>
+    <div class="chart-wrap">
+      <h4>Worker PWA — request mix (Day 1, ~50 workers)</h4>
+      <div class="chart-canvas-wrap"><canvas id="workerMix"></canvas></div>
+    </div>
+  </div>
+
+  <h3>11.2 Growth trajectory (planning input)</h3>
+  <div class="chart-wrap">
+    <h4>Bookings / month by horizon</h4>
+    <div class="chart-canvas-wrap"><canvas id="growthChart"></canvas></div>
+  </div>
+
+  <h3>11.3 Latency budget</h3>
+  <div class="chart-wrap">
+    <h4>p95 latency targets (ms)</h4>
+    <div class="chart-canvas-wrap"><canvas id="latencyChart"></canvas></div>
+  </div>
+
+  <table>
+    <thead><tr><th>Horizon</th><th>Tenants</th><th>Customers</th><th>Workers</th><th>Bookings/month</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Month 1</td><td>1 (pilot)</td><td>50</td><td>5</td><td>100</td><td>Manual recon, single VPS fine</td></tr>
+      <tr><td>Month 6</td><td>5</td><td>500</td><td>50</td><td>2,000</td><td>2nd VPS, API replicas</td></tr>
+      <tr><td>Year 1</td><td>20</td><td>3,000</td><td>300</td><td>15,000</td><td>Managed Postgres</td></tr>
+      <tr><td>Year 2</td><td>100</td><td>20,000</td><td>2,000</td><td>100,000</td><td>Kubernetes, dedicated workers</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="open">12. Open Decisions</h2>
+  <table>
+    <thead><tr><th>Decision</th><th>Deadline</th><th>Options</th><th>Lean</th></tr></thead>
+    <tbody>
+      <tr><td>Auth provider for staff (admin)</td><td>Week 1</td><td>NextAuth email+pass / WorkOS / Keycloak</td><td>NextAuth until B2B</td></tr>
+      <tr><td>M-Pesa: Lipana vs raw Daraja</td><td>Week 2</td><td>Lipana (faster) / Daraja direct (cheaper)</td><td>Lipana for STK, raw for B2C</td></tr>
+      <tr><td>Hosting</td><td>Week 1</td><td>Hetzner / DO / Vultr</td><td>Hetzner (best €/perf)</td></tr>
+      <tr><td>Postgres</td><td>Week 1</td><td>Self-host / Supabase / Neon</td><td>Self-host Day 1, Neon at scale</td></tr>
+      <tr><td>WhatsApp BSP</td><td>Week 3</td><td>Cloud API direct / Twilio / 360dialog</td><td>Direct</td></tr>
+      <tr><td>Maps: Google vs OSRM</td><td>Post-MVP</td><td>Google (cost) / OSRM (ops)</td><td>Google until &gt;20 staff, then OSRM</td></tr>
+      <tr><td>Worker PWA: next-pwa vs Workbox</td><td>Week 4</td><td>next-pwa (easier) / Workbox (control)</td><td>next-pwa</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="glossary">13. Glossary</h2>
+  <table>
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Tenant</strong></td><td>A customer of ServiceOps — an agency. Owns users, services, workers, bookings.</td></tr>
+      <tr><td><strong>Service</strong></td><td>A bookable offering (e.g. "2-bedroom deep clean"). Has a <code>job_type</code> enum value.</td></tr>
+      <tr><td><strong>Job type</strong></td><td>The category of work: <code>CLEANING</code>, <code>LAUNDRY</code>, <code>PLACEMENT</code>, <code>CAREGIVER</code>, <code>AIRBNB</code>, <code>PEST_CONTROL</code>, <code>MAINTENANCE</code>.</td></tr>
+      <tr><td><strong>Booking</strong></td><td>A customer's intent to purchase a service at a time. Has FSM. Becomes a Job when assigned.</td></tr>
+      <tr><td><strong>Job</strong></td><td>The actual work. Has FSM. Belongs to a Worker.</td></tr>
+      <tr><td><strong>Candidate</strong></td><td>A house-help or caregiver applicant, pre-placement.</td></tr>
+      <tr><td><strong>Placement</strong></td><td>A successful match: candidate → customer, possibly realized as a recurring Job.</td></tr>
+      <tr><td><strong>Outbox</strong></td><td>A row in <code>outbox</code> table representing a pending external call. Drained by worker.</td></tr>
+      <tr><td><strong>FSM</strong></td><td>Finite State Machine. The allowed transitions for a Booking / Job / Payment.</td></tr>
+      <tr><td><strong>Idempotency key</strong></td><td>A client-supplied UUID that lets the server recognize a repeated request.</td></tr>
+      <tr><td><strong>Lipana</strong></td><td>M-Pesa-as-a-service. Wraps Daraja with Stripe-like webhooks.</td></tr>
+      <tr><td><strong>Reliability score</strong></td><td>Per-worker number, 0-5, that drops on no-shows and recovers on completed jobs. Used in assignment.</td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+  <p class="lead">End of v0.1 architecture baseline. Next: API contract (OpenAPI), FSDs (M-Pesa, Worker offline, RLS), operational runbook, pilot onboarding checklist — pick whichever you want first.</p>
+
+</main>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#131a2e',
+      primaryTextColor: '#e6ebff',
+      primaryBorderColor: '#5eead4',
+      lineColor: '#5eead4',
+      secondaryColor: '#1a2240',
+      tertiaryColor: '#0b1020',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    },
+    securityLevel: 'loose',
+    flowchart: { useMaxWidth: true, htmlLabels: true },
+    sequence: { useMaxWidth: true, showSequenceNumbers: true },
+    er: { useMaxWidth: true },
+  });
+
+  // Charts
+  const chartTextColor = '#e6ebff';
+  const chartGridColor = 'rgba(94, 234, 212, 0.08)';
+  Chart.defaults.color = chartTextColor;
+  Chart.defaults.borderColor = chartGridColor;
+
+  new Chart(document.getElementById('customerMix'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Browse services', 'Booking funnel', 'View booking', 'Profile / settings', 'Referrals', 'Other'],
+      datasets: [{
+        data: [45, 20, 15, 10, 5, 5],
+        backgroundColor: ['#5eead4', '#818cf8', '#fbbf24', '#f472b6', '#a78bfa', '#64748b'],
+        borderColor: '#0b1020',
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'right' } },
+    },
+  });
+
+  new Chart(document.getElementById('workerMix'), {
+    type: 'doughnut',
+    data: {
+      labels: ["View today's jobs", 'Job status update', 'Photo upload', 'Profile', 'Earnings'],
+      datasets: [{
+        data: [50, 30, 10, 5, 5],
+        backgroundColor: ['#5eead4', '#818cf8', '#fbbf24', '#f472b6', '#a78bfa'],
+        borderColor: '#0b1020',
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'right' } },
+    },
+  });
+
+  new Chart(document.getElementById('growthChart'), {
+    type: 'line',
+    data: {
+      labels: ['Month 1', 'Month 3', 'Month 6', 'Year 1', 'Year 2'],
+      datasets: [{
+        label: 'Bookings / month',
+        data: [100, 600, 2000, 15000, 100000],
+        borderColor: '#5eead4',
+        backgroundColor: 'rgba(94, 234, 212, 0.15)',
+        fill: true,
+        tension: 0.35,
+        pointBackgroundColor: '#5eead4',
+        pointRadius: 5,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          type: 'logarithmic',
+          ticks: { callback: (v) => v.toLocaleString() },
+          grid: { color: chartGridColor },
+        },
+        x: { grid: { color: chartGridColor } },
+      },
+      plugins: { legend: { display: true } },
+    },
+  });
+
+  new Chart(document.getElementById('latencyChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Landing TTFB', 'Funnel step', 'STK Push init', 'Job list', 'Photo upload', 'Admin dashboard', 'Outbox drain'],
+      datasets: [{
+        label: 'p95 target (ms)',
+        data: [200, 300, 1500, 500, 0, 800, 100],
+        backgroundColor: ['#5eead4', '#5eead4', '#fbbf24', '#5eead4', '#64748b', '#5eead4', '#5eead4'],
+        borderRadius: 6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      scales: {
+        x: { grid: { color: chartGridColor }, beginAtZero: true },
+        y: { grid: { display: false } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (c) => c.parsed.x === 0 ? 'Direct to MinIO, no API hop' : c.parsed.x + ' ms' } },
+      },
+    },
+  });
+</script>
+
+</body>
+</html>

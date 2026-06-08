@@ -25,16 +25,16 @@ const SENSITIVE_PATHS = [
   'cvv',
 ];
 
-const ENV_LOG_LEVELS: Record<string, pino.Level> = {
+const ENV_LOG_LEVELS: Record<string, pino.LevelWithSilent> = {
   development: 'debug',
   staging: 'info',
   production: 'info',
   test: 'silent',
 };
 
-function getLogLevel(): pino.Level {
+function getLogLevel(): pino.LevelWithSilent {
   const env = process.env.NODE_ENV || 'development';
-  return (process.env.LOG_LEVEL as pino.Level) || ENV_LOG_LEVELS[env] || 'info';
+  return (process.env.LOG_LEVEL as pino.LevelWithSilent) || ENV_LOG_LEVELS[env] || 'info';
 }
 
 function getRedactPaths(): string[] {

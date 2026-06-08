@@ -10,15 +10,16 @@ import {
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 const VALID_JOB_TRANSITIONS: Record<string, string[]> = {
+  PENDING: ['ASSIGNED', 'CANCELLED'],
   ASSIGNED: ['ACCEPTED', 'DECLINED'],
   ACCEPTED: ['EN_ROUTE'],
-  EN_ROUTE: ['ARRIVED'],
-  ARRIVED: ['IN_PROGRESS'],
-  IN_PROGRESS: ['COMPLETED'],
+  EN_ROUTE: ['IN_PROGRESS', 'NO_SHOW'],
+  IN_PROGRESS: ['COMPLETED', 'STALLED'],
+  STALLED: ['IN_PROGRESS'],
   COMPLETED: [],
   DECLINED: [],
   NO_SHOW: [],
-  DISPUTED: [],
+  CANCELLED: [],
 };
 
 const DISTANCE_WEIGHT = 0.4;
@@ -53,7 +54,7 @@ export class DispatchService {
       include: { service: true },
     });
     if (!booking) throw new NotFoundError('Booking');
-    if (!['CONFIRMED', 'PENDING'].includes(booking.status)) {
+    if (booking.status !== 'CONFIRMED') {
       throw new ConflictError(`Cannot assign worker to booking in status ${booking.status}`);
     }
 
@@ -68,8 +69,10 @@ export class DispatchService {
     const conflict = await prisma.booking.findFirst({
       where: {
         workerId: data.workerId,
+        tenantId: data.tenantId,
         scheduledDate: booking.scheduledDate,
         status: { in: ['CONFIRMED', 'ASSIGNED', 'ACCEPTED', 'EN_ROUTE', 'IN_PROGRESS'] },
+        deletedAt: null,
         id: { not: data.bookingId },
       },
     });
@@ -77,20 +80,62 @@ export class DispatchService {
       throw new BookingConflictError(data.workerId, booking.scheduledDate.toISOString());
     }
 
-    const job = await prisma.job.create({
-      data: {
-        id: uuidv4(),
-        tenantId: data.tenantId,
-        bookingId: data.bookingId,
-        workerId: data.workerId,
-        serviceId: booking.serviceId,
-        status: 'ASSIGNED',
-      },
-    });
+    const { job } = await prisma.$transaction(async (tx) => {
+      const createdJob = await tx.job.create({
+        data: {
+          id: uuidv4(),
+          tenantId: data.tenantId,
+          bookingId: data.bookingId,
+          workerId: data.workerId,
+          serviceId: booking.serviceId,
+          status: 'ASSIGNED',
+          assignedAt: new Date(),
+        },
+      });
 
-    await prisma.booking.update({
-      where: { id: data.bookingId },
-      data: { workerId: data.workerId, status: 'ASSIGNED' },
+      const updatedBooking = await tx.booking.update({
+        where: { id: data.bookingId },
+        data: { workerId: data.workerId, status: 'ASSIGNED', version: { increment: 1 } },
+      });
+
+      await tx.jobEvent.createMany({
+        data: [
+          {
+            id: uuidv4(),
+            tenantId: data.tenantId,
+            bookingId: data.bookingId,
+            entityType: 'BOOKING',
+            fromState: booking.status,
+            toState: 'ASSIGNED',
+            reason: 'worker.assigned',
+            metadata: { workerId: data.workerId, jobId: createdJob.id },
+          },
+          {
+            id: uuidv4(),
+            tenantId: data.tenantId,
+            bookingId: data.bookingId,
+            jobId: createdJob.id,
+            entityType: 'JOB',
+            fromState: 'PENDING',
+            toState: 'ASSIGNED',
+            reason: 'worker.assigned',
+            metadata: { workerId: data.workerId },
+          },
+        ],
+      });
+
+      await tx.outbox.create({
+        data: {
+          id: uuidv4(),
+          tenantId: data.tenantId,
+          channel: 'whatsapp',
+          eventType: 'job.assigned',
+          eventKey: `${createdJob.id}:assigned`,
+          payload: { bookingId: data.bookingId, jobId: createdJob.id, workerId: data.workerId },
+        },
+      });
+
+      return { job: createdJob, booking: updatedBooking };
     });
 
     return { job, booking: { id: booking.id, status: 'ASSIGNED', workerId: data.workerId } };
@@ -99,10 +144,10 @@ export class DispatchService {
   async autoAssign(data: { bookingId: string; tenantId: string }) {
     const booking = await prisma.booking.findFirst({
       where: { id: data.bookingId, tenantId: data.tenantId },
-      include: { service: true },
+      include: { service: true, address: true },
     });
     if (!booking) throw new NotFoundError('Booking');
-    if (!['CONFIRMED', 'PENDING'].includes(booking.status)) {
+    if (booking.status !== 'CONFIRMED') {
       throw new ConflictError(`Cannot auto-assign worker to booking in status ${booking.status}`);
     }
 
@@ -123,6 +168,8 @@ export class DispatchService {
       await prisma.booking.findMany({
         where: {
           scheduledDate: booking.scheduledDate,
+          tenantId: data.tenantId,
+          deletedAt: null,
           status: { in: ['CONFIRMED', 'ASSIGNED', 'ACCEPTED', 'EN_ROUTE', 'IN_PROGRESS'] },
           workerId: { not: null },
         },
@@ -154,7 +201,7 @@ export class DispatchService {
         distanceScore = Math.max(0, 1 - distance / 15);
       }
 
-      const reliabilityScore = Number(worker.reliabilityScore) / 5;
+      const reliabilityScore = Number(worker.reliabilityScore) / 500;
 
       const jobsToday = await prisma.job.count({
         where: {
@@ -197,6 +244,7 @@ export class DispatchService {
     }
 
     const updateData: any = { status: newState };
+    let bookingStatus: string | null = null;
 
     switch (newState) {
       case 'ACCEPTED':
@@ -205,45 +253,72 @@ export class DispatchService {
       case 'EN_ROUTE':
         updateData.enRouteAt = new Date();
         break;
-      case 'ARRIVED':
-        updateData.arrivedAt = new Date();
-        break;
       case 'IN_PROGRESS':
         updateData.startedAt = new Date();
         if (location) updateData.startedLocation = JSON.parse(JSON.stringify(location));
+        bookingStatus = 'IN_PROGRESS';
         break;
       case 'COMPLETED':
         updateData.completedAt = new Date();
         if (location) updateData.completedLocation = JSON.parse(JSON.stringify(location));
-        await prisma.booking.update({
-          where: { id: job.bookingId },
-          data: { status: 'COMPLETED', completedAt: new Date() },
-        });
+        bookingStatus = 'COMPLETED';
         break;
       case 'NO_SHOW':
         updateData.noShowAt = new Date();
+        bookingStatus = 'CONFIRMED';
+        break;
+      case 'DECLINED':
+        bookingStatus = 'CONFIRMED';
+        break;
+      case 'STALLED':
+        bookingStatus = 'STALLED';
         break;
     }
 
-    const updatedJob = await prisma.job.update({
-      where: { id: jobId },
-      data: updateData,
-    });
-
-    const bookingStatusMap: Record<string, string> = {
-      ACCEPTED: 'ACCEPTED',
-      EN_ROUTE: 'EN_ROUTE',
-      IN_PROGRESS: 'IN_PROGRESS',
-      COMPLETED: 'COMPLETED',
-      NO_SHOW: 'NO_SHOW',
-    };
-
-    if (bookingStatusMap[newState]) {
-      await prisma.booking.update({
-        where: { id: job.bookingId },
-        data: { status: bookingStatusMap[newState] },
+    const updatedJob = await prisma.$transaction(async (tx) => {
+      const changedJob = await tx.job.update({
+        where: { id: jobId },
+        data: updateData,
       });
-    }
+
+      if (bookingStatus) {
+        await tx.booking.update({
+          where: { id: job.bookingId },
+          data: {
+            status: bookingStatus,
+            version: { increment: 1 },
+            ...(bookingStatus === 'COMPLETED' ? { completedAt: new Date() } : {}),
+          },
+        });
+      }
+
+      await tx.jobEvent.create({
+        data: {
+          id: uuidv4(),
+          tenantId,
+          bookingId: job.bookingId,
+          jobId,
+          entityType: 'JOB',
+          fromState: job.status,
+          toState: newState,
+          reason: 'job.transition',
+          metadata: location ? { location } : undefined,
+        },
+      });
+
+      await tx.outbox.create({
+        data: {
+          id: uuidv4(),
+          tenantId,
+          channel: 'in_app',
+          eventType: `job.${newState.toLowerCase()}`,
+          eventKey: `${jobId}:${newState}:${Date.now()}`,
+          payload: { bookingId: job.bookingId, jobId, status: newState },
+        },
+      });
+
+      return changedJob;
+    });
 
     return updatedJob;
   }

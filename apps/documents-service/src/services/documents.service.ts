@@ -81,10 +81,11 @@ export class DocumentsService {
       data: {
         id: uuidv4(),
         tenantId,
-        topic: 'document.uploaded',
-        key: documentId,
+        channel: 'documents',
+        eventType: 'document.uploaded',
+        eventKey: documentId,
         payload: { documentId, fileKey, category: data.category, userId } as any,
-        headers: { eventType: 'document.uploaded' } as any,
+        headers: {} as any,
         status: 'PENDING',
       },
     });
@@ -122,10 +123,11 @@ export class DocumentsService {
       data: {
         id: uuidv4(),
         tenantId,
-        topic: 'document.deleted',
-        key: id,
+        channel: 'documents',
+        eventType: 'document.deleted',
+        eventKey: id,
         payload: { documentId: id, fileKey: doc.fileKey } as any,
-        headers: { eventType: 'document.deleted' } as any,
+        headers: {} as any,
         status: 'PENDING',
       },
     });

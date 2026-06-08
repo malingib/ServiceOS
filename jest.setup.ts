@@ -1,4 +1,4 @@
-import { cleanDatabase, prismaTestClient } from '@mobiwave/testing';
+import { prismaTestClient } from './packages/testing/src';
 
 process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://localhost:5432/serviceops_test';

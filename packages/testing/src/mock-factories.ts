@@ -49,7 +49,7 @@ export interface MockTenant {
   currency: string;
   settings: Record<string, unknown> | null;
   paymentSettings: Record<string, unknown> | null;
-  commissionRate: number;
+  commissionRateBps: number;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -64,7 +64,7 @@ export function createMockTenant(overrides?: Partial<MockTenant>): MockTenant {
     currency: 'KES',
     settings: null,
     paymentSettings: null,
-    commissionRate: 10,
+    commissionRateBps: 1000,
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,
@@ -88,9 +88,9 @@ export interface MockBooking {
   cancelledBy: string | null;
   cancelledAt: Date | null;
   cancellationPolicySnapshot: Record<string, unknown> | null;
-  baseAmount: number;
-  discountAmount: number;
-  totalAmount: number;
+  baseAmountMinor: bigint;
+  discountAmountMinor: bigint;
+  totalAmountMinor: bigint;
   currency: string;
   isRecurring: boolean;
   recurringRuleId: string | null;
@@ -98,6 +98,7 @@ export interface MockBooking {
   createdAt: Date;
   updatedAt: Date;
   completedAt: Date | null;
+  deletedAt: Date | null;
 }
 
 export function createMockBooking(overrides?: Partial<MockBooking>): MockBooking {
@@ -113,14 +114,14 @@ export function createMockBooking(overrides?: Partial<MockBooking>): MockBooking
     scheduledStart: new Date(baseDate.setHours(10, 0, 0, 0)),
     scheduledEnd: new Date(baseDate.setHours(12, 0, 0, 0)),
     timezone: 'Africa/Nairobi',
-    status: 'PENDING',
+    status: 'AWAITING_PAYMENT',
     cancellationReason: null,
     cancelledBy: null,
     cancelledAt: null,
     cancellationPolicySnapshot: null,
-    baseAmount: 2500,
-    discountAmount: 0,
-    totalAmount: 2500,
+    baseAmountMinor: BigInt(2500),
+    discountAmountMinor: BigInt(0),
+    totalAmountMinor: BigInt(2500),
     currency: 'KES',
     isRecurring: false,
     recurringRuleId: null,
@@ -128,6 +129,7 @@ export function createMockBooking(overrides?: Partial<MockBooking>): MockBooking
     createdAt: new Date(),
     updatedAt: new Date(),
     completedAt: null,
+    deletedAt: null,
     ...overrides,
   };
 }
@@ -166,7 +168,7 @@ export function createMockPayment(overrides?: Partial<MockPayment>): MockPayment
     checkoutRequestId: null,
     mpesaReceiptNumber: null,
     mpesaTransactionDate: null,
-    status: 'PENDING',
+    status: 'INITIATED',
     paymentMethod: 'MPESA_STK',
     metadata: null,
     createdAt: new Date(),
@@ -184,6 +186,7 @@ export interface MockJob {
   status: string;
   startedLocation: Record<string, unknown> | null;
   completedLocation: Record<string, unknown> | null;
+  assignedAt: Date | null;
   acceptedAt: Date | null;
   enRouteAt: Date | null;
   arrivedAt: Date | null;
@@ -209,6 +212,7 @@ export function createMockJob(overrides?: Partial<MockJob>): MockJob {
     status: 'ASSIGNED',
     startedLocation: null,
     completedLocation: null,
+    assignedAt: null,
     acceptedAt: null,
     enRouteAt: null,
     arrivedAt: null,
@@ -234,7 +238,7 @@ export interface MockWorkerProfile {
   kycStatus: string;
   kycData: Record<string, unknown> | null;
   skills: string[];
-  hourlyRate: number | null;
+  hourlyRateMinor: bigint | null;
   reliabilityScore: number;
   isAvailable: boolean;
   currentLocation: { lat: number; lng: number } | null;
@@ -253,8 +257,8 @@ export function createMockWorkerProfile(overrides?: Partial<MockWorkerProfile>):
     kycStatus: 'VERIFIED',
     kycData: null,
     skills: ['cleaning', 'laundry'],
-    hourlyRate: 500,
-    reliabilityScore: 4.5,
+    hourlyRateMinor: BigInt(500),
+    reliabilityScore: 500,
     isAvailable: true,
     currentLocation: { lat: -1.2921, lng: 36.8219 },
     workingHours: null,
@@ -272,7 +276,7 @@ export interface MockService {
   slug: string;
   description: string | null;
   category: string;
-  basePrice: number;
+  basePriceMinor: bigint;
   durationMinutes: number;
   requirements: string[];
   isActive: boolean;
@@ -290,7 +294,7 @@ export function createMockService(overrides?: Partial<MockService>): MockService
     slug: 'standard-cleaning',
     description: 'Professional home cleaning service',
     category: 'CLEANING',
-    basePrice: 2500,
+    basePriceMinor: BigInt(2500),
     durationMinutes: 120,
     requirements: ['cleaning supplies'],
     isActive: true,

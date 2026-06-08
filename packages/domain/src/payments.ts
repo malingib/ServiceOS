@@ -2,14 +2,14 @@ import type { ISODateTime, Money, UUID } from "./shared";
 
 export type PaymentMethod = "MPESA_STK" | "MPESA_B2C" | "CASH" | "BANK_TRANSFER" | "CARD";
 export type PaymentStatus =
-  | "PENDING"
-  | "PROCESSING"
-  | "COMPLETED"
+  | "INITIATED"
+  | "SUCCESS"
   | "FAILED"
+  | "UNKNOWN"
+  | "RECONCILED"
+  | "REFUND_PENDING"
   | "REFUNDED"
-  | "CANCELLED"
-  | "EXPIRED"
-  | "REVERSED";
+  | "REFUND_FAILED";
 
 export interface PaymentRecord {
   paymentId: UUID;

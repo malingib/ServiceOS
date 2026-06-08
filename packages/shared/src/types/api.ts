@@ -108,12 +108,12 @@ export interface AvailabilityQuery {
 export interface StkPushRequest {
   bookingId: string;
   phoneNumber: string;
-  amount: number;
+  amountMinor: string;
 }
 
 export interface B2CRequest {
   destinationPhone: string;
-  amount: number;
+  amountMinor: string;
   occasion?: string;
 }
 
@@ -167,13 +167,13 @@ export interface CreateWorkerRequest {
   userId?: string;
   idNumber?: string;
   skills?: string[];
-  hourlyRate?: number;
+  hourlyRateMinor?: string;
   workingHours?: Record<string, unknown>;
 }
 
 export interface UpdateWorkerRequest {
   skills?: string[];
-  hourlyRate?: number;
+  hourlyRateMinor?: string;
   isAvailable?: boolean;
   workingHours?: Record<string, unknown>;
   currentLocation?: { lat: number; lng: number };
@@ -189,7 +189,7 @@ export interface CreateServiceRequest {
   slug?: string;
   description?: string;
   category: string;
-  basePrice: number;
+  basePriceMinor: string;
   durationMinutes: number;
   requirements?: string[];
   metadata?: Record<string, unknown>;
@@ -199,7 +199,7 @@ export interface UpdateServiceRequest {
   name?: string;
   description?: string;
   category?: string;
-  basePrice?: number;
+  basePriceMinor?: string;
   durationMinutes?: number;
   requirements?: string[];
   isActive?: boolean;

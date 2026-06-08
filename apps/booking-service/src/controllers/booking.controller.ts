@@ -16,6 +16,7 @@ export class BookingController {
         scheduledDate,
         scheduledStart,
         notes,
+        idempotencyKey: req.headers['idempotency-key'] as string | undefined,
       });
       const response: ApiResponse = {
         success: true,
@@ -109,7 +110,7 @@ export class BookingController {
     try {
       const authReq = req as AuthenticatedRequest;
       const { id } = req.params;
-      const booking = await bookingService.confirm(id, authReq.user.tenantId);
+      const booking = await bookingService.confirm(id, authReq.user.tenantId, authReq.user.id);
       const response: ApiResponse = {
         success: true,
         data: booking,
@@ -125,7 +126,7 @@ export class BookingController {
     try {
       const authReq = req as AuthenticatedRequest;
       const { id } = req.params;
-      const booking = await bookingService.complete(id, authReq.user.tenantId);
+      const booking = await bookingService.complete(id, authReq.user.tenantId, authReq.user.id);
       const response: ApiResponse = {
         success: true,
         data: booking,
@@ -142,7 +143,7 @@ export class BookingController {
       const authReq = req as AuthenticatedRequest;
       const { id } = req.params;
       const { workerId } = req.body;
-      const booking = await bookingService.assignWorker(id, authReq.user.tenantId, workerId);
+      const booking = await bookingService.assignWorker(id, authReq.user.tenantId, workerId, authReq.user.id);
       const response: ApiResponse = {
         success: true,
         data: booking,
