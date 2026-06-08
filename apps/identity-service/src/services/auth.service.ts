@@ -3,6 +3,7 @@ import { otpService } from './otp.service';
 import { generateTokens, verifyRefreshToken } from '@mobiwave/shared';
 import { v4 as uuidv4 } from 'uuid';
 import Redis from 'ioredis';
+import { supabase, authHelpers } from '@serviceops/supabase';
 import {
   AppError,
   NotFoundError,
@@ -75,9 +76,25 @@ export class AuthService {
       throw new ConflictError('User with this phone number already exists');
     }
 
+    // Create user in Supabase Auth
+    const { data: supabaseUser, error: supabaseError } = await authHelpers.createSupabaseUser({
+      phone: data.phone,
+      userMetadata: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        tenant_id: data.tenantId,
+        role: data.role,
+      },
+    });
+
+    if (supabaseError || !supabaseUser.user) {
+      throw new ValidationError(`Failed to create user in Supabase: ${supabaseError?.message}`);
+    }
+
+    // Create user record in Prisma database
     const user = await prisma.user.create({
       data: {
-        id: uuidv4(),
+        id: supabaseUser.user.id,
         tenantId: data.tenantId,
         phone: data.phone,
         firstName: data.firstName,
@@ -85,7 +102,7 @@ export class AuthService {
         role: data.role,
         status: 'ACTIVE',
         verifiedAt: new Date(),
-        metadata: JSON.parse(JSON.stringify({ authProvider: 'phone_otp' })),
+        metadata: JSON.parse(JSON.stringify({ authProvider: 'supabase_phone_otp' })),
       },
     });
 
@@ -160,6 +177,12 @@ export class AuthService {
 
     if (user.status !== 'ACTIVE') {
       throw new AuthenticationError('Account is not active');
+    }
+
+    // Verify user exists in Supabase Auth
+    const supabaseUser = await authHelpers.getUserByPhone(data.phone);
+    if (!supabaseUser) {
+      throw new NotFoundError('User not found in authentication system');
     }
 
     await prisma.user.update({

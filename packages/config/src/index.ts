@@ -5,9 +5,10 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   HOST: z.string().default('0.0.0.0'),
 
-  DATABASE_URL: z.string().default('postgresql://localhost:5432/serviceops'),
-  DATABASE_REPLICA_URL: z.string().optional(),
-  DIRECT_URL: z.string().optional(),
+  POSTGRES_URL: z.string().default('postgresql://localhost:5432/serviceops'),
+  POSTGRES_PRISMA_URL: z.string().optional(),
+  POSTGRES_URL_NON_POOLING: z.string().optional(),
+  READ_REPLICA_URL: z.string().optional(),
 
   REDIS_URL: z.string().default('redis://localhost:6379'),
 
@@ -32,10 +33,10 @@ const envSchema = z.object({
   NOVU_API_KEY: z.string().optional(),
   NOVU_API_URL: z.string().optional(),
 
-  KEYCLOAK_URL: z.string().optional(),
-  KEYCLOAK_REALM: z.string().default('mobiwave'),
-  KEYCLOAK_CLIENT_ID: z.string().default('serviceops'),
-  KEYCLOAK_CLIENT_SECRET: z.string().optional(),
+  SUPABASE_URL: z.string().optional(),
+  SUPABASE_ANON_KEY: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  SUPABASE_JWT_SECRET: z.string().optional(),
 
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),

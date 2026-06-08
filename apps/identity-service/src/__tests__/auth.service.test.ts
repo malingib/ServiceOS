@@ -1,11 +1,25 @@
 import { authService, AuthService } from '../services/auth.service';
 import { otpService } from '../services/otp.service';
-import { keycloakService } from '../services/keycloak.service';
 import { createMockUser, createMockTenant, createTestAuthTokens } from '@mobiwave/testing';
 import { NotFoundError, ValidationError, AuthenticationError, ConflictError } from '@mobiwave/shared';
 
 jest.mock('../services/otp.service');
-jest.mock('../services/keycloak.service');
+jest.mock('@serviceops/supabase', () => ({
+  supabase: {
+    auth: {
+      admin: {
+        createUser: jest.fn(),
+        listUsers: jest.fn(),
+        deleteUser: jest.fn(),
+      },
+    },
+  },
+  authHelpers: {
+    createSupabaseUser: jest.fn(),
+    getUserByPhone: jest.fn(),
+    updateUserMetadata: jest.fn(),
+  },
+}));
 jest.mock('@mobiwave/prisma', () => ({
   __esModule: true,
   default: {
@@ -37,8 +51,6 @@ describe('AuthService', () => {
     jest.clearAllMocks();
     (otpService.generate as jest.Mock).mockResolvedValue({ code: '123456', expiresIn: 300 });
     (otpService.verify as jest.Mock).mockResolvedValue(true);
-    (keycloakService.createUser as jest.Mock).mockResolvedValue('kc-user-id');
-    (keycloakService.assignRole as jest.Mock).mockResolvedValue(undefined);
   });
 
   describe('requestOtp', () => {

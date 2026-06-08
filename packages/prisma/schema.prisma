@@ -5,8 +5,8 @@ generator client {
 
 datasource db {
   provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")
+  url        = env("POSTGRES_URL")
+  directUrl  = env("POSTGRES_URL_NON_POOLING")
   extensions = [uuid_ossp, pgcrypto, btree_gist]
 }
 
@@ -328,7 +328,7 @@ model JobEvent {
   @@map("job_events")
 }
 
-// ─── Payments ───────────────────────────────────────────────────────────────
+// ─── Payments ──────────────────────────────────────────��────────────────────
 
 model Payment {
   id                   String    @id @default(uuid()) @db.Uuid

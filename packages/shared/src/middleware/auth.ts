@@ -4,6 +4,7 @@ import { AuthenticationError, ForbiddenError } from '../utils/errors';
 import { AuthenticatedRequest } from '../types/api';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'serviceops-jwt-secret-change-in-production';
+const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET || '';
 
 export interface JwtPayload {
   sub: string;
@@ -23,7 +24,18 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    // Try to verify with our JWT_SECRET first (for backward compatibility)
+    let decoded: JwtPayload;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    } catch {
+      // If that fails, try Supabase JWT (if configured)
+      if (!SUPABASE_JWT_SECRET) {
+        throw new Error('Invalid token');
+      }
+      decoded = jwt.verify(token, SUPABASE_JWT_SECRET) as JwtPayload;
+    }
+    
     const authReq = req as AuthenticatedRequest;
     authReq.user = {
       id: decoded.sub,
