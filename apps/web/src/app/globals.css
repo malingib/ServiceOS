@@ -4,11 +4,75 @@
 
 :root {
   color-scheme: light;
+  --bg: oklch(0.985 0.008 178);
+  --surface: oklch(1 0 0);
+  --ink: oklch(0.19 0.046 207);
+  --muted: oklch(0.43 0.035 205);
+  --line: oklch(0.88 0.026 183);
+  --brand: oklch(0.73 0.19 156);
+  --brand-dark: oklch(0.42 0.13 161);
+  --aqua: oklch(0.82 0.16 194);
+  --mint: oklch(0.94 0.055 166);
+  --lemon: oklch(0.9 0.18 94);
+  --danger: oklch(0.59 0.18 25);
+  --shadow-tight: 0 8px 8px oklch(0.19 0.046 207 / 0.06);
 }
 
 body {
   margin: 0;
-  background: #f8fafc;
-  color: #0f172a;
+  background:
+    radial-gradient(circle at 8% 0%, oklch(0.94 0.07 178) 0, transparent 31rem),
+    linear-gradient(180deg, var(--bg), oklch(0.965 0.012 205));
+  color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+button:hover,
+a:hover {
+  transform: translateY(-1px);
+}
+
+input,
+select,
+textarea {
+  color: var(--ink);
+}
+
+::placeholder {
+  color: oklch(0.45 0.03 205);
+  opacity: 1;
+}
+
+:focus-visible {
+  outline: 3px solid oklch(0.82 0.16 194 / 0.7);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  button:hover,
+  a:hover {
+    transform: none;
+  }
 }
